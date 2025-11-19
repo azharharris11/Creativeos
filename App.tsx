@@ -27,12 +27,16 @@ function App() {
       setTimeout(() => setCurrentStep('matrix'), 1500);
   };
 
+  // UPDATE: Fix Data Wipe - Append new hypotheses instead of overwriting
   const handleMatrixExecution = async (slots: Record<'A' | 'B' | 'C', MatrixSlot>) => {
       setCurrentStep('reality');
       
-      const initialHypotheses: Hypothesis[] = (['A', 'B', 'C'] as const).map(id => ({
+      // Generate unique batch ID to group these 3 slots together in Canvas
+      const batchId = simpleUUID().substring(0, 4);
+      
+      const newHypotheses: Hypothesis[] = (['A', 'B', 'C'] as const).map(id => ({
           id: simpleUUID(),
-          slotId: id,
+          slotId: `${batchId}_${id}`, // Unique Slot ID combining batch and slot letter
           matrixConfig: slots[id],
           hook: goldenHook,
           visualPrompt: '',
@@ -40,8 +44,11 @@ function App() {
           overlay: { enabled: true, text: goldenHook, style: 'IG_Story', yPosition: 50 }
       }));
       
-      setHypotheses(initialHypotheses);
-      initialHypotheses.forEach(h => generateImageForHypothesis(h));
+      // Append to existing list
+      setHypotheses(prev => [...prev, ...newHypotheses]);
+      
+      // Trigger generation for the new batch only
+      newHypotheses.forEach(h => generateImageForHypothesis(h));
   };
 
   const generateImageForHypothesis = async (h: Hypothesis) => {
@@ -72,6 +79,18 @@ function App() {
   const handleUpdateHypothesis = (id: string, updates: Partial<Hypothesis>) => {
       setHypotheses(prev => prev.map(h => h.id === id ? { ...h, ...updates } : h));
   };
+  
+  // UPDATE: Master Switch - Update global hook and optionally all overlays
+  const handleAnchorUpdate = (newHook: string, updateOverlays: boolean) => {
+      setGoldenHook(newHook);
+      if (updateOverlays) {
+          setHypotheses(prev => prev.map(h => ({
+              ...h,
+              hook: newHook,
+              overlay: h.overlay ? { ...h.overlay, text: newHook } : undefined
+          })));
+      }
+  };
 
   // --- REMIX LOGIC ---
   const handleRemix = async (mode: RemixMode, parent: Hypothesis) => {
@@ -97,7 +116,7 @@ function App() {
           // Keep hook, vary matrix (simplified randomization for now)
           const newHypotheses: Hypothesis[] = [1, 2, 3].map((i) => {
              const newConfig = { ...parent.matrixConfig };
-             // Simple randomization logic could go here, for now we just re-roll generation with high temp
+             // Logic to randomize config slightly could go here
              return {
                   id: simpleUUID(),
                   slotId: `${parent.slotId}_vis_${i}`,
@@ -128,6 +147,7 @@ function App() {
                 onRemix={handleRemix}
                 onUpdateHypothesis={handleUpdateHypothesis}
                 onDelete={(id) => setHypotheses(prev => prev.filter(h => h.id !== id))}
+                onUpdateAnchor={handleAnchorUpdate}
             />
           );
       }

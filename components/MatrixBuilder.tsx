@@ -1,20 +1,50 @@
 
 import React, { useState, useEffect } from 'react';
-import { MatrixSlot, MATRIX_DEFAULTS, MatrixVar_Format, MatrixVar_Setting, MatrixVar_Lighting, MatrixVar_Persona, MatrixVar_POV, MatrixVar_Action, MatrixVar_Tone } from '../types';
-import { ShieldAlertIcon, ZapIcon, DiceIcon } from './icons';
+import { MatrixSlot, MATRIX_DEFAULTS, MatrixVar_Format, MatrixSlot as SlotType } from '../types';
+import { ShieldAlertIcon, ZapIcon, DiceIcon, InfoIcon } from './icons';
 
 interface MatrixBuilderProps {
     onGenerate: (config: Record<'A' | 'B' | 'C', MatrixSlot>) => void;
 }
 
 const SELECT_OPTIONS = {
-    format: ['UGC_Raw', 'Editorial_Pro', 'CCTV_Surveillance', 'Meme_Chaotic'],
-    setting: ['Private_Indoor', 'Public_Indoor', 'Nature_Outdoor', 'Urban_Outdoor', 'Abstract_Studio'],
-    lighting: ['Golden_Hour', 'Night_Flash', 'Neon_RGB', 'Natural_Window', 'Office_Fluorescent'],
-    persona: ['Gen_Z_User', 'Mom_Dad_User', 'Expert_Doctor', 'Worker_BlueCollar', 'Hand_Only'],
-    pov: ['Selfie', 'First_Person', 'Third_Person', 'CCTV_High_Angle'],
-    action: ['Applying_Product', 'Shock_Reaction', 'Struggle_Pain', 'Result_Flexing'],
-    tone: ['Urgent_Panic', 'Skeptical', 'Happy_Relieved', 'Serious_Scientific']
+    format: [
+        'Big_Font_Impact', 
+        'Gmail_Letter_UX', 
+        'Billboard_Context', 
+        'Long_Text_Story', 
+        'Ugly_Problem_Visual', 
+        'MS_Paint_Nostalgia', 
+        'Instagram_Story_UX', 
+        'Reddit_Thread_UX',
+        'Handwritten_Whiteboard',
+        'Meme_Format',
+        'CCTV_Security_Footage',
+        'Direct_Flash_Selfie',
+        'Cartoonic_Graphic'
+    ],
+    setting: [
+        'Messy_Bedroom', 
+        'Bathroom_Mirror_Dirty', 
+        'Car_Dashboard_Traffic', 
+        'Supermarket_Aisle',
+        'Street_Pavement',
+        'Kitchen_Table_Cluttered',
+        'Blank_Wall_Background',
+        'Computer_Screen_Macro'
+    ],
+    lighting: [
+        'Harsh_Flash_ON', 
+        'Bad_Fluorescent_Office', 
+        'Dim_Bedroom_Lamp', 
+        'Overexposed_Sunlight', 
+        'Screen_Glow_Blue',
+        'Flat_Digital_NoShadow'
+    ],
+    persona: ['Gen_Z_Real', 'Stressed_Parent', 'Skeptical_User', 'Blue_Collar_Worker', 'Anonymous_Poster'],
+    pov: ['Selfie_Bad_Angle', 'First_Person_Shaky', 'Screen_Screenshot', 'Security_Cam_TopDown', 'Street_Level_Wide', 'Macro_Texture'],
+    action: ['Showing_Problem_CloseUp', 'Unboxing_Messy', 'Pointing_Finger', 'Holding_Product_Awkwardly', 'Just_Text_No_Action'],
+    tone: ['Brutally_Honest', 'Urgent_Warning', 'Confused_Skeptical', 'Manic_Energy', 'Deadpan_Humor']
 };
 
 const SLOT_COLORS = {
@@ -55,6 +85,7 @@ export const MatrixBuilder: React.FC<MatrixBuilderProps> = ({ onGenerate }) => {
 
         // Helper to randomize a slot (excluding ID)
         const randomizeSlot = (slotId: 'B' | 'C') => {
+            // @ts-ignore - Dynamic assignment
             newSlots[slotId] = {
                 ...newSlots[slotId],
                 format: getRandom(SELECT_OPTIONS.format),
@@ -77,13 +108,21 @@ export const MatrixBuilder: React.FC<MatrixBuilderProps> = ({ onGenerate }) => {
         <div className="w-full max-w-7xl mx-auto p-4">
             <header className="mb-8 text-center">
                 <h2 className="text-3xl font-black uppercase tracking-tighter text-slate-200">Phase 2: The Divergence Matrix</h2>
-                <p className="text-slate-400">Configure 3 radically different visual vehicles. <br/> <span className="text-red-400">Warning: High similarity triggers Algorithmic Penalty.</span></p>
+                <p className="text-slate-400">Configure 3 radically different visual vehicles using the <span className="text-red-400 font-bold">13 Proven Ugly Formats</span>. <br/> <span className="text-red-400 font-bold uppercase">Do not make them pretty. Make them Convert.</span></p>
             </header>
 
-            <div className="flex justify-end mb-4">
+            <div className="flex flex-col md:flex-row justify-between items-center mb-6 gap-4">
+                 <div className="bg-blue-900/20 border border-blue-500/30 p-3 rounded-lg flex items-start gap-3 max-w-2xl">
+                    <InfoIcon className="w-5 h-5 text-blue-400 flex-shrink-0 mt-0.5" />
+                    <div className="text-sm text-blue-200">
+                        <strong className="block text-blue-300 mb-1">The "Ugly Ads" Philosophy:</strong>
+                        Pretty ads get ignored. We use "Pattern Interrupts" like <span className="text-white font-mono bg-blue-900/50 px-1 rounded">MS_Paint</span>, <span className="text-white font-mono bg-blue-900/50 px-1 rounded">Notes_App</span>, or <span className="text-white font-mono bg-blue-900/50 px-1 rounded">Messy_Rooms</span> to signal Authenticity and bypass mental ad filters.
+                    </div>
+                 </div>
+
                  <button 
                     onClick={handleRandomizeChaos}
-                    className="flex items-center gap-2 bg-gray-800 hover:bg-gray-700 text-purple-300 px-4 py-2 rounded-lg border border-purple-500/30 transition-colors text-sm font-bold uppercase tracking-wider"
+                    className="flex items-center gap-2 bg-gray-800 hover:bg-gray-700 text-purple-300 px-4 py-2 rounded-lg border border-purple-500/30 transition-colors text-sm font-bold uppercase tracking-wider whitespace-nowrap"
                 >
                     <DiceIcon className="w-5 h-5" />
                     Inject Random Chaos
@@ -137,7 +176,7 @@ export const MatrixBuilder: React.FC<MatrixBuilderProps> = ({ onGenerate }) => {
                     `}
                 >
                     <ZapIcon className="w-6 h-6" />
-                    {conflictScore > 5 ? 'Fix Similarity First' : 'Execute Uglifier Engine'}
+                    {conflictScore > 5 ? 'Fix Similarity First' : 'Generate "Ugly" Concepts'}
                 </button>
             </div>
         </div>

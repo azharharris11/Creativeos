@@ -30,15 +30,45 @@ export interface CampaignBlueprint {
   };
 }
 
-// --- MATRIX ENGINE TYPES ---
+// --- MATRIX ENGINE TYPES (UPDATED FOR UGLY ADS PHILOSOPHY) ---
 
-export type MatrixVar_Format = 'UGC_Raw' | 'Editorial_Pro' | 'CCTV_Surveillance' | 'Meme_Chaotic';
-export type MatrixVar_Setting = 'Private_Indoor' | 'Public_Indoor' | 'Nature_Outdoor' | 'Urban_Outdoor' | 'Abstract_Studio';
-export type MatrixVar_Lighting = 'Golden_Hour' | 'Night_Flash' | 'Neon_RGB' | 'Natural_Window' | 'Office_Fluorescent';
-export type MatrixVar_Persona = 'Gen_Z_User' | 'Mom_Dad_User' | 'Expert_Doctor' | 'Worker_BlueCollar' | 'Hand_Only';
-export type MatrixVar_POV = 'Selfie' | 'First_Person' | 'Third_Person' | 'CCTV_High_Angle';
-export type MatrixVar_Action = 'Applying_Product' | 'Shock_Reaction' | 'Struggle_Pain' | 'Result_Flexing';
-export type MatrixVar_Tone = 'Urgent_Panic' | 'Skeptical' | 'Happy_Relieved' | 'Serious_Scientific';
+export type MatrixVar_Format = 
+  'Big_Font_Impact' | 
+  'Gmail_Letter_UX' | 
+  'Billboard_Context' | 
+  'Long_Text_Story' | // Notes App style
+  'Ugly_Problem_Visual' | 
+  'MS_Paint_Nostalgia' | 
+  'Instagram_Story_UX' | 
+  'Cartoonic_Graphic' |
+  'Reddit_Thread_UX' |
+  'Handwritten_Whiteboard' |
+  'Meme_Format' |
+  'CCTV_Security_Footage' |
+  'Direct_Flash_Selfie';
+
+export type MatrixVar_Setting = 
+  'Messy_Bedroom' | 
+  'Bathroom_Mirror_Dirty' | 
+  'Car_Dashboard_Traffic' | 
+  'Supermarket_Aisle' |
+  'Street_Pavement' |
+  'Kitchen_Table_Cluttered' |
+  'Computer_Screen_Macro' |
+  'Blank_Wall_Background';
+
+export type MatrixVar_Lighting = 
+  'Harsh_Flash_ON' | 
+  'Bad_Fluorescent_Office' | 
+  'Dim_Bedroom_Lamp' | 
+  'Overexposed_Sunlight' | 
+  'Screen_Glow_Blue' |
+  'Flat_Digital_NoShadow';
+
+export type MatrixVar_Persona = 'Gen_Z_Real' | 'Stressed_Parent' | 'Skeptical_User' | 'Blue_Collar_Worker' | 'Anonymous_Poster';
+export type MatrixVar_POV = 'Selfie_Bad_Angle' | 'First_Person_Shaky' | 'Screen_Screenshot' | 'Security_Cam_TopDown' | 'Street_Level_Wide' | 'Macro_Texture';
+export type MatrixVar_Action = 'Showing_Problem_CloseUp' | 'Unboxing_Messy' | 'Pointing_Finger' | 'Holding_Product_Awkwardly' | 'Just_Text_No_Action';
+export type MatrixVar_Tone = 'Brutally_Honest' | 'Urgent_Warning' | 'Confused_Skeptical' | 'Manic_Energy' | 'Deadpan_Humor';
 
 export interface MatrixSlot {
   id: 'A' | 'B' | 'C' | string; // Allow string for dynamic slots in God Mode
@@ -52,20 +82,27 @@ export interface MatrixSlot {
 }
 
 export const MATRIX_DEFAULTS: Record<'A' | 'B' | 'C', MatrixSlot> = {
-  A: { id: 'A', format: 'UGC_Raw', setting: 'Private_Indoor', lighting: 'Natural_Window', persona: 'Gen_Z_User', pov: 'Selfie', action: 'Applying_Product', tone: 'Happy_Relieved' },
-  B: { id: 'B', format: 'Editorial_Pro', setting: 'Abstract_Studio', lighting: 'Golden_Hour', persona: 'Expert_Doctor', pov: 'Third_Person', action: 'Result_Flexing', tone: 'Serious_Scientific' },
-  C: { id: 'C', format: 'CCTV_Surveillance', setting: 'Urban_Outdoor', lighting: 'Night_Flash', persona: 'Worker_BlueCollar', pov: 'CCTV_High_Angle', action: 'Shock_Reaction', tone: 'Urgent_Panic' }
+  A: { id: 'A', format: 'Ugly_Problem_Visual', setting: 'Messy_Bedroom', lighting: 'Harsh_Flash_ON', persona: 'Gen_Z_Real', pov: 'Selfie_Bad_Angle', action: 'Showing_Problem_CloseUp', tone: 'Brutally_Honest' },
+  B: { id: 'B', format: 'Long_Text_Story', setting: 'Blank_Wall_Background', lighting: 'Screen_Glow_Blue', persona: 'Anonymous_Poster', pov: 'Screen_Screenshot', action: 'Just_Text_No_Action', tone: 'Urgent_Warning' },
+  C: { id: 'C', format: 'Billboard_Context', setting: 'Street_Pavement', lighting: 'Overexposed_Sunlight', persona: 'Blue_Collar_Worker', pov: 'Street_Level_Wide', action: 'Holding_Product_Awkwardly', tone: 'Deadpan_Humor' }
 };
 
 // --- OVERLAY & REMIX TYPES ---
 
-export type OverlayStyle = 'IG_Story' | 'TikTok_Modern' | 'Meme_Impact';
+export type OverlayStyle = 'IG_Story' | 'TikTok_Modern' | 'Meme_Impact' | 'Plain_Text' | 'Notion_Header' | 'Handwritten_Marker';
 
 export interface OverlayConfig {
     enabled: boolean;
     text: string;
-    style: OverlayStyle;
+    style: OverlayStyle; // Presets
     yPosition: number; // 0-100 percentage
+    
+    // Advanced Styling
+    color?: string;
+    backgroundColor?: string; // 'transparent' or hex
+    fontSize?: number; // 10-100
+    fontFamily?: string;
+    textAlign?: 'left' | 'center' | 'right';
 }
 
 export type RemixMode = 'scale_vibe' | 'scale_visual';
@@ -97,7 +134,17 @@ export type AwarenessStage = 'Problem Aware' | 'Solution Aware' | 'Product Aware
 export const ALL_AWARENESS_STAGES: AwarenessStage[] = ['Problem Aware', 'Solution Aware', 'Product Aware', 'Most Aware', 'Unaware'];
 
 export type CreativeFormat = string;
-export const ALL_CREATIVE_FORMATS: string[] = ['Penawaran Langsung', 'UGC', 'Sebelum & Sesudah', 'Iklan Artikel', 'Carousel', 'Video', 'UGC_Raw', 'Editorial_Pro', 'CCTV_Surveillance', 'Meme_Chaotic'];
+export const ALL_CREATIVE_FORMATS: string[] = [
+    'Big_Font_Impact', 
+    'Gmail_Letter_UX', 
+    'Billboard_Context', 
+    'Long_Text_Story', 
+    'Ugly_Problem_Visual', 
+    'MS_Paint_Nostalgia', 
+    'Instagram_Story_UX', 
+    'Reddit_Thread_UX',
+    'Handwritten_Whiteboard'
+];
 
 export type PlacementFormat = 'Feed' | 'Story' | 'Reels' | 'Search';
 

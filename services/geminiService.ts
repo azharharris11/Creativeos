@@ -93,40 +93,99 @@ export const extractAnchorFromText = async (textInput: string): Promise<{ produc
     }
 };
 
-// --- THE UGLIFIER ENGINE ---
+// --- THE UGLIFIER ENGINE 3.0 ---
+// Implements the "Ugly Ads Formula" based on the 13 Proven Formats.
 const getFormatDirectives = (format: string) => {
     switch (format) {
-        case 'UGC_Raw':
+        case 'Ugly_Problem_Visual':
             return `
-            STYLE: Amateur phone photography, shot on iPhone 14. 
-            QUALITY: Low fidelity, slight noise, NOT professional.
-            IMPERFECTIONS: Messy background, unmade bed, clutter on table, slight motion blur.
-            LIGHTING: Bad lighting is okay. Mixed color temperatures.
-            FORBIDDEN: Bokeh, studio lighting, perfect skin, professional composition.
+            STYLE: Raw, unflattering, problem-focused photography.
+            CONTENT: Show the messy, ugly truth of the problem (e.g., messy room, acne skin, dirty floor).
+            VIBE: "I struggle with this too". Authentic and relatable.
+            QUALITY: Low fidelity, amateur shot, bad angle.
             `;
-        case 'Editorial_Pro':
+        case 'Billboard_Context':
             return `
-            STYLE: High-end magazine advertisement, shot on Hasselblad.
-            QUALITY: Ultra-sharp, 8k resolution, professional color grading.
-            LIGHTING: Studio softbox, rim lighting, perfect separation from background.
-            COMPOSITION: Rule of thirds, balanced, clean negative space.
+            STYLE: A photo of a blank roadside billboard, street sign, or shop sign.
+            POV: Shot from a moving car window or street level (low angle).
+            ENVIRONMENT: Gritty urban street, cloudy sky, power lines visible. Familiarity bias.
+            CANVAS: The billboard surface must be PLAIN WHITE or SOLID COLOR (ready for text overlay).
             `;
-        case 'CCTV_Surveillance':
+        case 'MS_Paint_Nostalgia':
             return `
-            STYLE: Security camera footage, fisheye lens distortion.
-            QUALITY: Grainy, timestamp overlay style, high contrast, desaturated.
+            STYLE: "Graphic design is my passion" meme aesthetic. Windows 95 vibe.
+            ELEMENTS: Clashing colors (Red/Yellow/Blue), pixelated edges, jagged cutout of the product.
+            COMPOSITION: Intentionally bad design. Plain white background with a chaotic element.
+            VIBE: Nostalgic, anti-design, impossible to ignore.
+            `;
+        case 'Instagram_Story_UX':
+        case 'Fake_Platform_UI':
+            return `
+            STYLE: Mimics a raw photo taken natively inside the Instagram Story camera.
+            CONTENT: A simple background (desk, floor, wall) that looks like a user's organic content.
+            VIBE: Native trust. "This is a friend's update".
+            `;
+        case 'Gmail_Letter_UX':
+            return `
+            STYLE: Minimalist digital screenshot.
+            CONTENT: A blank white email body background. Resembles a Gmail read view.
+            VIBE: Intimate, "We need to apologize", "Personal Update".
+            IMPORTANT: Just the background container for text.
+            `;
+        case 'Long_Text_Story':
+            return `
+            STYLE: Screenshot of the Apple Notes app (yellow lines) or Notion page (stark white).
+            CONTENT: Just the blank writing surface.
+            VIBE: "I'm just jotting down thoughts". Intimate, diary-like.
+            IMPORTANT: NO TEXT RENDERED. Just the blank writing surface.
+            `;
+        case 'Reddit_Thread_UX':
+            return `
+            STYLE: Minimalist forum style background.
+            CONTENT: Resembles a dark mode or light mode text thread background.
+            VIBE: Community-driven, "Is this a scam?", Skeptical discussion.
+            `;
+        case 'Handwritten_Whiteboard':
+            return `
+            STYLE: A photo of a slightly dirty whiteboard in a home office.
+            CONTENT: Blank space on the whiteboard for text.
+            LIGHTING: Glare from a window, amateur lighting.
+            VIBE: Educational, "Let me explain this", "Quick math".
+            `;
+        case 'Big_Font_Impact':
+            return `
+            STYLE: A solid, high-contrast background color (e.g., Warning Yellow, Alert Red, or Stark Black).
+            CONTENT: Minimal distraction. The focus is purely on creating a canvas for HUGE text.
+            VIBE: Warning sign, Pattern Interrupt.
+            `;
+        case 'CCTV_Security_Footage':
+            return `
+            STYLE: Security camera footage, fisheye lens distortion, black and white or desaturated.
             ANGLE: High angle looking down (Top-down).
-            VIBE: Voyeuristic, raw, "caught on camera" feel.
+            VIBE: Voyeuristic, raw, "caught on camera", "secret revealed".
+            QUALITY: Very grainy, timestamp overlay style.
             `;
-        case 'Meme_Chaotic':
+        case 'Direct_Flash_Selfie':
             return `
-            STYLE: Direct flash photography (snapshot aesthetic).
-            LIGHTING: Harsh on-camera flash, dark background, high contrast / deep shadows.
-            VIBE: Cursed image aesthetic, viral internet content, chaotic energy.
-            COLORS: Oversaturated, frying effect.
+            STYLE: Direct on-camera flash (snapshot aesthetic).
+            LIGHTING: Harsh flash, dark background, hard shadows behind the object.
+            VIBE: Cursed image, viral internet content, chaotic energy.
+            COLORS: High contrast, greasy skin texture / reflective surfaces.
+            `;
+        case 'Meme_Format':
+            return `
+            STYLE: Classic internet meme template style.
+            CONTENT: Top and bottom blank areas or a standard meme background (but blank).
+            VIBE: "Language of the internet". Not on brand, but highly engaging.
+            `;
+        case 'Cartoonic_Graphic':
+            return `
+            STYLE: Simple, crude cartoon or doodle style.
+            CONTENT: A stick figure or simple character dealing with a problem.
+            VIBE: Storytelling, disarming, "inner child".
             `;
         default:
-            return `Style: Realistic photography adapted for ${format}.`;
+            return `Style: Amateur, raw, unpolished photography.`;
     }
 };
 
@@ -134,7 +193,7 @@ export const generateHypothesisImage = async (slot: MatrixSlot, productInfo: str
     
     const formatDirective = getFormatDirectives(slot.format);
     
-    const INDONESIAN_CONTEXT = "Context: Indonesia. Use local housing architecture (ceramic tiles, gypsum ceiling), local skin tones (Southeast Asian), and modest styling.";
+    const INDONESIAN_CONTEXT = "Context: Indonesia/Global D2C. Use relatable environments (messy rooms, streets, simple desks).";
 
     // Critical: Explicitly forbid text rendering because we use Native Overlay
     const prompt = `
@@ -145,7 +204,7 @@ export const generateHypothesisImage = async (slot: MatrixSlot, productInfo: str
     - Subject: ${slot.persona.replace(/_/g, ' ')}
     - Action: ${slot.action.replace(/_/g, ' ')}
     - Setting: ${slot.setting.replace(/_/g, ' ')}
-    - Lighting Code: ${slot.lighting.replace(/_/g, ' ')}
+    - Lighting: ${slot.lighting.replace(/_/g, ' ')}
     - Camera POV: ${slot.pov.replace(/_/g, ' ')}
     - Emotional Tone: ${slot.tone.replace(/_/g, ' ')}
 
@@ -156,17 +215,18 @@ export const generateHypothesisImage = async (slot: MatrixSlot, productInfo: str
     DO NOT RENDER ANY TEXT. DO NOT ADD CAPTIONS. DO NOT ADD LOGOS.
     The image must be clean because text will be added programmatically later.
     
-    THE UGLIFIER DIRECTIVES (STRICTLY FOLLOW):
+    THE "UGLY AD" FORMULA (STRICTLY FOLLOW):
+    We are aiming for "Pattern Interrupt" via ugliness/rawness.
+    The goal is Authenticity and Trust, not Beauty.
     ${formatDirective}
     
     LOCALIZATION:
     ${INDONESIAN_CONTEXT}
     
-    NEGATIVE PROMPT: text, watermark, logo, letters, alphabet, signage, illustration, painting, 3d render, cartoon, anime, deformed, distorted faces.
+    NEGATIVE PROMPT: professional studio, bokeh, cinematic lighting, 8k, masterpiece, perfect skin, makeup, model, symmetrical face, text, watermark, logo, letters, beautiful, aesthetic, polished, corporate.
     `;
 
     try {
-        // Switch to gemini-2.5-flash-image (Nano Banana) as requested
         const response = await ai.models.generateContent({
             model: 'gemini-2.5-flash-image',
             contents: { parts: [{ text: prompt }] },
@@ -191,14 +251,18 @@ export const generateHypothesisImage = async (slot: MatrixSlot, productInfo: str
 export const roastHypothesis = async (imageBase64: string, hook: string) => {
     const imagePart = imageB64ToGenerativePart(imageBase64);
     const prompt = `
-    Act as a brutal Senior Creative Director. Analyze this ad creative.
+    Act as a brutal Direct Response Marketing Expert who loves "Ugly Ads". Analyze this creative.
     The Headline used is: "${hook}"
 
+    Assess if this follows the "Ugly Ads Formula" (Raw, Authentic, Pattern Interrupt).
+    If it looks too professional/stock-photo-like, give it a LOW score.
+    If it looks amateur, messy, or "real", give it a HIGH score.
+
     Provide a JSON output with:
-    1. "vibe": 3 words describing the aesthetic (e.g., "Cheap, Authentic, Scary").
-    2. "targetAudience": Who does this appeal to? (e.g., "Stressed Students", "Rich Moms").
-    3. "thumbstopScore": A score from 0-100 on how likely this is to stop scrolling. Be harsh.
-    4. "critique": A 1-sentence roast of why it works or fails.
+    1. "vibe": 3 words describing the aesthetic (e.g., "Raw, Cringey, Trustworthy").
+    2. "targetAudience": Who does this appeal to?
+    3. "thumbstopScore": A score from 0-100. High score = Ugly/Authentic enough to stop scrolling.
+    4. "critique": A 1-sentence roast.
 
     Output JSON only.
     `;
@@ -229,12 +293,16 @@ export const roastHypothesis = async (imageBase64: string, hook: string) => {
 
 export const generateHookVariations = async (originalHook: string, productContext: string): Promise<string[]> => {
     const prompt = `
-    You are a Direct Response Copywriter.
+    You are a Direct Response Copywriter specializing in "Ugly Ads".
     Product: ${productContext}
     Original Winning Hook: "${originalHook}"
     
-    Generate 3 NEW distinct variations of this hook using different angles (e.g., Urgency, Curiosity, Benefit).
-    Keep them short (under 10 words).
+    Generate 3 NEW distinct variations of this hook using these specific "Ugly Ad" angles:
+    1. The "Slippery Slope" (Long text opener, creating curiosity).
+    2. The "Skeptical/Negative" (e.g. "I thought this was a scam...").
+    3. The "Warning" (e.g. "Stop doing this if you want X").
+    
+    Keep them punchy (under 10 words) for the overlay, but implied they lead to longer text.
     Return a JSON array of strings.
     `;
 
@@ -253,7 +321,7 @@ export const generateHookVariations = async (originalHook: string, productContex
         return JSON.parse(response.text);
     } catch (e) {
         console.error("Hook variation failed", e);
-        return [originalHook + " (V1)", originalHook + " (V2)", originalHook + " (V3)"];
+        return [originalHook + " (Warning)", originalHook + " (Skeptical)", originalHook + " (Secret)"];
     }
 };
 

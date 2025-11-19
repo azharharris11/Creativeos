@@ -83,10 +83,14 @@ const validateCarouselArc = (slides: CarouselSlide[], arc: string) => {
 };
 
 const FORMAT_TIPS: Partial<Record<CreativeFormat, string>> = {
-    'Penawaran Langsung': "Iklan statis berkinerja lebih baik dengan headline numerik (misal: '3 Alasan...') dan penawaran yang sangat jelas.",
-    'UGC': "Pastikan visual dan teks terasa otentik dan tidak terlalu dipoles, seolah-olah dibuat oleh pengguna sungguhan.",
-    'Sebelum & Sesudah': "Pastikan transformasi terlihat jelas dan dramatis. Perbedaan antara 'sebelum' dan 'sesudah' harus mencolok.",
-    'Iklan Artikel': "Gaya visual dan headline harus meniru konten editorial yang kredibel, bukan iklan yang terang-terangan.",
+    'Big_Font_Impact': "Gunakan latar belakang warna solid kontras tinggi. Headline harus singkat, provokatif, dan menyoroti masalah spesifik.",
+    'Gmail_Letter_UX': "Gunakan judul seperti 'We apologize' atau 'Personal Update'. Teks harus terasa intim, bukan korporat.",
+    'Billboard_Context': "Manfaatkan 'Familiarity Bias'. Pesan di papan reklame harus singkat dan mudah dibaca sekilas.",
+    'Long_Text_Story': "Gunakan format Notes App. Mulai dengan 'Slippery Slope' di baris pertama untuk menarik pembaca masuk ke cerita.",
+    'Ugly_Problem_Visual': "Jangan takut tampil jelek. Tunjukkan masalah (misal: kulit berjerawat, kamar berantakan) secara gamblang dan nyata.",
+    'MS_Paint_Nostalgia': "Gunakan warna yang bertabrakan (Merah/Kuning/Biru) dan cropping yang buruk. Estetika 'Graphic design is my passion'.",
+    'Instagram_Story_UX': "Gunakan font native Instagram. Tambahkan elemen interaktif palsu seperti Poll atau Question Box.",
+    'Reddit_Thread_UX': "Gunakan judul yang skeptis atau kontroversial, seperti 'Is this a scam?' atau 'Unpopular Opinion'.",
 };
 
 const ImagePreview: React.FC<{ concept: AdConcept }> = ({ concept }) => {

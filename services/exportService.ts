@@ -5,110 +5,102 @@ import { Hypothesis, OverlayConfig, AdConcept, TextStyle } from '../types';
 
 // Draw text on canvas with native social media styling
 const drawOverlay = (ctx: CanvasRenderingContext2D, canvas: HTMLCanvasElement, overlay: OverlayConfig) => {
-    const { text, style, yPosition } = overlay;
-    const y = (yPosition / 100) * canvas.height;
-    const x = canvas.width / 2;
-    const maxWidth = canvas.width * 0.8;
+    const { 
+        text, 
+        style, 
+        yPosition, 
+        color = '#ffffff', 
+        backgroundColor = 'transparent', 
+        fontSize: sizeScale = 40, // Relative scale 10-100
+        textAlign = 'center',
+        fontFamily = 'Inter' 
+    } = overlay;
 
-    ctx.textAlign = 'center';
+    const y = (yPosition / 100) * canvas.height;
+    const x = textAlign === 'center' ? canvas.width / 2 : textAlign === 'left' ? canvas.width * 0.05 : canvas.width * 0.95;
+    const maxWidth = canvas.width * 0.9;
+
+    ctx.textAlign = textAlign as CanvasTextAlign;
     ctx.textBaseline = 'middle';
 
-    if (style === 'IG_Story') {
-        // Instagram Modern Style
-        const fontSize = canvas.width * 0.08;
-        ctx.font = `900 ${fontSize}px 'Inter', sans-serif`; // Modern sans
-        
-        // Split text into lines
-        const words = text.split(' ');
-        let line = '';
-        const lines = [];
-        for(let n = 0; n < words.length; n++) {
-            const testLine = line + words[n] + ' ';
-            const metrics = ctx.measureText(testLine);
-            if (metrics.width > maxWidth && n > 0) {
-                lines.push(line);
-                line = words[n] + ' ';
-            } else {
-                line = testLine;
-            }
-        }
-        lines.push(line);
+    // Map font family names to actual fonts
+    const fontMap: Record<string, string> = {
+        'Classic': 'Inter, sans-serif',
+        'Modern': 'Montserrat, sans-serif',
+        'Neon': 'Courier New, monospace',
+        'Typewriter': 'Times New Roman, serif',
+        'Meme': 'Impact, Oswald, sans-serif'
+    };
+    const actualFont = fontMap[fontFamily] || fontMap['Classic'];
 
-        // Draw rounded background per line
-        lines.forEach((l, i) => {
-            const lineY = y + (i * fontSize * 1.2);
-            const metrics = ctx.measureText(l);
-            const bgWidth = metrics.width + (fontSize * 0.5);
-            const bgHeight = fontSize * 1.2;
-            
-            ctx.fillStyle = 'white';
-            ctx.roundRect(x - bgWidth/2, lineY - bgHeight/2, bgWidth, bgHeight, 10);
-            ctx.fill();
-            
-            ctx.fillStyle = 'black';
-            ctx.fillText(l, x, lineY);
-        });
-
-    } else if (style === 'TikTok_Modern') {
-        // TikTok Style (White text, black outline/shadow)
-        const fontSize = canvas.width * 0.07;
-        ctx.font = `700 ${fontSize}px 'Proxima Nova', 'Arial', sans-serif`;
-        ctx.fillStyle = 'white';
-        ctx.shadowColor = 'black';
-        ctx.shadowBlur = 4;
-        ctx.shadowOffsetX = 2;
-        ctx.shadowOffsetY = 2;
-
-        const words = text.split(' ');
-        let line = '';
-        let lineY = y;
-        
-        for(let n = 0; n < words.length; n++) {
-            const testLine = line + words[n] + ' ';
-            const metrics = ctx.measureText(testLine);
-            if (metrics.width > maxWidth && n > 0) {
-                ctx.strokeText(line, x, lineY);
-                ctx.fillText(line, x, lineY);
-                line = words[n] + ' ';
-                lineY += fontSize * 1.2;
-            } else {
-                line = testLine;
-            }
-        }
-        ctx.strokeText(line, x, lineY);
-        ctx.fillText(line, x, lineY);
-
-    } else if (style === 'Meme_Impact') {
-        // Impact Font (Top/Bottom text style)
-        const fontSize = canvas.width * 0.1;
-        ctx.font = `900 ${fontSize}px 'Impact', 'Oswald', sans-serif`;
-        ctx.fillStyle = 'white';
-        ctx.strokeStyle = 'black';
-        ctx.lineWidth = fontSize * 0.08;
-        ctx.shadowBlur = 0;
-
-        // Wrap text
-        const words = text.toUpperCase().split(' ');
-        let line = '';
-        const lines = [];
-        for(let n = 0; n < words.length; n++) {
-            const testLine = line + words[n] + ' ';
-            const metrics = ctx.measureText(testLine);
-            if (metrics.width > maxWidth && n > 0) {
-                lines.push(line);
-                line = words[n] + ' ';
-            } else {
-                line = testLine;
-            }
-        }
-        lines.push(line);
-
-        lines.forEach((l, i) => {
-            const lineY = y + (i * fontSize * 1.1);
-            ctx.strokeText(l, x, lineY);
-            ctx.fillText(l, x, lineY);
-        });
+    // Calculate actual pixel size based on scale (base width reference 1080px)
+    const fontSize = (canvas.width * (sizeScale / 100)) * 0.15; 
+    
+    // Style specific tweaks
+    if (style === 'Meme_Impact') {
+        ctx.font = `900 ${fontSize}px ${fontMap['Meme']}`;
+    } else {
+        ctx.font = `700 ${fontSize}px ${actualFont}`;
     }
+
+    // Split text into lines
+    const words = text.split(' ');
+    let line = '';
+    const lines = [];
+    for(let n = 0; n < words.length; n++) {
+        const testLine = line + words[n] + ' ';
+        const metrics = ctx.measureText(testLine);
+        if (metrics.width > maxWidth && n > 0) {
+            lines.push(line);
+            line = words[n] + ' ';
+        } else {
+            line = testLine;
+        }
+    }
+    lines.push(line);
+
+    const lineHeight = fontSize * 1.2;
+
+    lines.forEach((l, i) => {
+        const lineY = y + (i * lineHeight);
+        const metrics = ctx.measureText(l);
+        
+        // Draw Background if not transparent
+        if (backgroundColor && backgroundColor !== 'transparent') {
+            const paddingX = fontSize * 0.4;
+            const paddingY = fontSize * 0.2;
+            let bgX = x;
+            
+            if (textAlign === 'center') bgX = x - metrics.width / 2;
+            if (textAlign === 'right') bgX = x - metrics.width;
+
+            ctx.fillStyle = backgroundColor;
+            // Use roundRect if supported, else fillRect
+            if (ctx.roundRect) {
+                ctx.beginPath();
+                ctx.roundRect(bgX - paddingX, lineY - lineHeight/2 - paddingY, metrics.width + (paddingX*2), lineHeight + (paddingY*2), 8);
+                ctx.fill();
+            } else {
+                ctx.fillRect(bgX - paddingX, lineY - lineHeight/2 - paddingY, metrics.width + (paddingX*2), lineHeight + (paddingY*2));
+            }
+        }
+
+        ctx.fillStyle = color;
+        
+        // Add Shadow/Stroke for specific styles
+        if (style === 'TikTok_Modern' || style === 'Meme_Impact') {
+            ctx.shadowColor = 'black';
+            ctx.shadowBlur = 0;
+            ctx.lineWidth = fontSize * 0.08;
+            ctx.strokeStyle = 'black';
+            ctx.strokeText(l, x, lineY);
+        } else {
+            // Reset shadow
+            ctx.shadowColor = 'transparent';
+        }
+
+        ctx.fillText(l, x, lineY);
+    });
 };
 
 // Helper for AdConcept text overlay
