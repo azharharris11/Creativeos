@@ -1,5 +1,5 @@
 
-export type ViewMode = 'linear' | 'canvas';
+export type ViewMode = 'linear' | 'canvas' | 'dashboard' | 'mindmap';
 
 export interface TargetPersona {
   description: string;
@@ -57,6 +57,19 @@ export const MATRIX_DEFAULTS: Record<'A' | 'B' | 'C', MatrixSlot> = {
   C: { id: 'C', format: 'CCTV_Surveillance', setting: 'Urban_Outdoor', lighting: 'Night_Flash', persona: 'Worker_BlueCollar', pov: 'CCTV_High_Angle', action: 'Shock_Reaction', tone: 'Urgent_Panic' }
 };
 
+// --- OVERLAY & REMIX TYPES ---
+
+export type OverlayStyle = 'IG_Story' | 'TikTok_Modern' | 'Meme_Impact';
+
+export interface OverlayConfig {
+    enabled: boolean;
+    text: string;
+    style: OverlayStyle;
+    yPosition: number; // 0-100 percentage
+}
+
+export type RemixMode = 'scale_vibe' | 'scale_visual';
+
 export interface Hypothesis {
   id: string;
   slotId: string;
@@ -71,6 +84,8 @@ export interface Hypothesis {
     thumbstopScore: number; // 0-100
     critique: string;
   };
+  overlay?: OverlayConfig;
+  parentId?: string; // Track lineage for remixes
   error?: string;
 }
 

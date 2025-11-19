@@ -4,9 +4,9 @@ import { LandingPage } from './components/LandingPage';
 import { InputForm } from './components/InputForm';
 import { MatrixBuilder } from './components/MatrixBuilder';
 import { RealitySimulator } from './components/RealitySimulator';
-import { MindMapCanvas } from './components/MindMapCanvas'; // New Import
-import { AppStep, MatrixSlot, Hypothesis, ViewMode } from './types'; // Updated Type Import
-import { generateHypothesisImage, roastHypothesis } from './services/geminiService';
+import { MindMapCanvas } from './components/MindMapCanvas';
+import { AppStep, MatrixSlot, Hypothesis, ViewMode, RemixMode } from './types';
+import { generateHypothesisImage, roastHypothesis, generateHookVariations } from './services/geminiService';
 import { NetworkIcon, LayoutGridIcon } from './components/icons';
 
 function simpleUUID() {
@@ -15,45 +15,40 @@ function simpleUUID() {
 
 function App() {
   const [currentStep, setCurrentStep] = useState<AppStep>('landing');
-  const [viewMode, setViewMode] = useState<ViewMode>('linear'); // 'linear' or 'canvas'
+  const [viewMode, setViewMode] = useState<ViewMode>('linear');
   
   const [productContext, setProductContext] = useState('');
   const [goldenHook, setGoldenHook] = useState('');
   const [hypotheses, setHypotheses] = useState<Hypothesis[]>([]);
 
-  // Step 1: Lock the Anchor
   const handleAnchorConfirmed = (product: string, hook: string) => {
       setProductContext(product);
       setGoldenHook(hook);
-      setTimeout(() => setCurrentStep('matrix'), 1500); // Slight delay for effect
+      setTimeout(() => setCurrentStep('matrix'), 1500);
   };
 
-  // Step 2: Execute Matrix
   const handleMatrixExecution = async (slots: Record<'A' | 'B' | 'C', MatrixSlot>) => {
       setCurrentStep('reality');
       
-      // Initialize Hypotheses Placeholders
       const initialHypotheses: Hypothesis[] = (['A', 'B', 'C'] as const).map(id => ({
           id: simpleUUID(),
           slotId: id,
           matrixConfig: slots[id],
           hook: goldenHook,
           visualPrompt: '',
-          isGenerating: true
+          isGenerating: true,
+          overlay: { enabled: true, text: goldenHook, style: 'IG_Story', yPosition: 50 }
       }));
       
       setHypotheses(initialHypotheses);
-
-      // Generate in parallel
       initialHypotheses.forEach(h => generateImageForHypothesis(h));
   };
 
   const generateImageForHypothesis = async (h: Hypothesis) => {
       try {
-          // Update state to generating
           setHypotheses(prev => prev.map(item => item.id === h.id ? { ...item, isGenerating: true, error: undefined } : item));
           
-          const imageUrl = await generateHypothesisImage(h.matrixConfig, productContext, goldenHook);
+          const imageUrl = await generateHypothesisImage(h.matrixConfig, productContext, h.hook);
           
           setHypotheses(prev => prev.map(item => item.id === h.id ? { ...item, imageUrl, isGenerating: false } : item));
       } catch (e: any) {
@@ -67,33 +62,60 @@ function App() {
       if(!hypothesis || !hypothesis.imageUrl) return;
 
       try {
-        const roastData = await roastHypothesis(hypothesis.imageUrl.split(',')[1], goldenHook);
+        const roastData = await roastHypothesis(hypothesis.imageUrl.split(',')[1], hypothesis.hook);
         setHypotheses(prev => prev.map(item => item.id === id ? { ...item, aiRoast: roastData } : item));
       } catch (e) {
           console.error("Roast failed", e);
       }
   };
-  
-  // Canvas Actions
-  const handleDuplicateHypothesis = (h: Hypothesis) => {
-      const newId = simpleUUID();
-      const newHypothesis: Hypothesis = {
-          ...h,
-          id: newId,
-          slotId: h.slotId + '_copy',
-          imageUrl: undefined, // Clear image to force regeneration if desired, or keep it
-          isGenerating: false,
-          aiRoast: undefined
-      };
-      setHypotheses(prev => [...prev, newHypothesis]);
+
+  const handleUpdateHypothesis = (id: string, updates: Partial<Hypothesis>) => {
+      setHypotheses(prev => prev.map(h => h.id === id ? { ...h, ...updates } : h));
   };
 
-  const handleDeleteHypothesis = (id: string) => {
-      setHypotheses(prev => prev.filter(h => h.id !== id));
+  // --- REMIX LOGIC ---
+  const handleRemix = async (mode: RemixMode, parent: Hypothesis) => {
+      if (mode === 'scale_vibe') {
+          // Generate 3 new hooks
+          const newHooks = await generateHookVariations(parent.hook, productContext);
+          
+          const newHypotheses: Hypothesis[] = newHooks.map((hook, i) => ({
+              id: simpleUUID(),
+              slotId: `${parent.slotId}_vibe_${i+1}`,
+              matrixConfig: { ...parent.matrixConfig }, // Keep visuals
+              hook: hook,
+              visualPrompt: '',
+              isGenerating: true,
+              parentId: parent.id,
+              overlay: { ...parent.overlay!, text: hook } // Update overlay text
+          }));
+          
+          setHypotheses(prev => [...prev, ...newHypotheses]);
+          newHypotheses.forEach(h => generateImageForHypothesis(h));
+
+      } else if (mode === 'scale_visual') {
+          // Keep hook, vary matrix (simplified randomization for now)
+          const newHypotheses: Hypothesis[] = [1, 2, 3].map((i) => {
+             const newConfig = { ...parent.matrixConfig };
+             // Simple randomization logic could go here, for now we just re-roll generation with high temp
+             return {
+                  id: simpleUUID(),
+                  slotId: `${parent.slotId}_vis_${i}`,
+                  matrixConfig: newConfig,
+                  hook: parent.hook,
+                  visualPrompt: '',
+                  isGenerating: true,
+                  parentId: parent.id,
+                  overlay: parent.overlay
+             };
+          });
+
+          setHypotheses(prev => [...prev, ...newHypotheses]);
+          newHypotheses.forEach(h => generateImageForHypothesis(h));
+      }
   };
 
   const renderContent = () => {
-      // If in God Mode (Canvas), override normal flow (except landing)
       if (viewMode === 'canvas' && currentStep !== 'landing') {
           return (
             <MindMapCanvas 
@@ -102,8 +124,10 @@ function App() {
                 goldenHook={goldenHook}
                 onRegenerate={(id) => { const h = hypotheses.find(i => i.id === id); if(h) generateImageForHypothesis(h); }}
                 onRoast={handleRoast}
-                onDuplicate={handleDuplicateHypothesis}
-                onDelete={handleDeleteHypothesis}
+                onDuplicate={(h) => handleRemix('scale_visual', h)} // Shortcut duplicate to visual remix
+                onRemix={handleRemix}
+                onUpdateHypothesis={handleUpdateHypothesis}
+                onDelete={(id) => setHypotheses(prev => prev.filter(h => h.id !== id))}
             />
           );
       }
@@ -112,17 +136,21 @@ function App() {
           case 'landing': return <LandingPage onStart={() => setCurrentStep('anchor')} />;
           case 'anchor': return <InputForm onConfirmAnchor={handleAnchorConfirmed} />;
           case 'matrix': return <MatrixBuilder onGenerate={handleMatrixExecution} />;
-          case 'reality': return <RealitySimulator hypotheses={hypotheses} onRegenerate={(id) => { 
-              const h = hypotheses.find(i => i.id === id);
-              if(h) generateImageForHypothesis(h);
-          }} onRoast={handleRoast} />;
+          case 'reality': return (
+            <RealitySimulator 
+                hypotheses={hypotheses} 
+                onRegenerate={(id) => { const h = hypotheses.find(i => i.id === id); if(h) generateImageForHypothesis(h); }} 
+                onRoast={handleRoast}
+                onRemix={handleRemix}
+                onUpdateHypothesis={handleUpdateHypothesis}
+            />
+          );
           default: return null;
       }
   };
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-200 font-sans selection:bg-cyan-500 selection:text-black overflow-hidden">
-        {/* Background Grid Effect */}
         <div className="fixed inset-0 z-0 opacity-20 pointer-events-none" style={{ backgroundImage: 'radial-gradient(#1e293b 1px, transparent 1px)', backgroundSize: '20px 20px' }}></div>
         
         <div className="relative z-10 flex flex-col min-h-screen h-screen">
@@ -134,7 +162,6 @@ function App() {
                             <span className="text-xs bg-gray-800 px-2 py-0.5 rounded text-gray-400 hidden sm:inline-block">v2.0 HYPOTHESIS ENGINE</span>
                         </div>
                         
-                        {/* View Switcher */}
                         {hypotheses.length > 0 && (
                             <div className="flex bg-gray-800 rounded-lg p-1">
                                 <button 
@@ -147,7 +174,7 @@ function App() {
                                     onClick={() => setViewMode('canvas')}
                                     className={`flex items-center gap-2 px-3 py-1.5 rounded-md text-xs font-bold transition-all ${viewMode === 'canvas' ? 'bg-purple-600 text-white shadow-lg' : 'text-gray-400 hover:text-gray-200'}`}
                                 >
-                                    <NetworkIcon className="w-4 h-4" /> God Mode (Canvas)
+                                    <NetworkIcon className="w-4 h-4" /> God Mode
                                 </button>
                             </div>
                         )}
@@ -163,7 +190,7 @@ function App() {
                 </nav>
             )}
 
-            <main className="flex-grow relative overflow-hidden">
+            <main className="flex-grow relative overflow-hidden overflow-y-auto">
                 {renderContent()}
             </main>
         </div>

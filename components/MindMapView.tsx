@@ -1,12 +1,15 @@
+
 import React from 'react';
 import { MindMapNode, AdConcept, CampaignBlueprint, ViewMode, TargetPersona, AwarenessStage, BuyingTriggerObject, CreativeFormat, PlacementFormat } from '../types';
-// FIX: Import MindMapCanvasProps from MindMapCanvas
 import { MindMapCanvas, MindMapCanvasProps } from './MindMapCanvas';
 import { LayoutGridIcon, NetworkIcon } from './icons';
 
-// FIX: Removed the local interface definition. It is now defined and exported from MindMapCanvas.tsx.
+interface MindMapViewProps extends MindMapCanvasProps {
+  viewMode: ViewMode;
+  onSetViewMode: (mode: ViewMode) => void;
+}
 
-export const MindMapView: React.FC<MindMapCanvasProps> = (props) => {
+export const MindMapView: React.FC<MindMapViewProps> = (props) => {
   return (
     <div className="w-full h-screen flex flex-col bg-gray-950 text-white">
       <header className="flex-shrink-0 bg-brand-surface border-b border-gray-700 p-4 flex justify-between items-center z-20">

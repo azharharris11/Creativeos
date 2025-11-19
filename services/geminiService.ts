@@ -4,6 +4,12 @@ import { CampaignBlueprint, MatrixSlot, Hypothesis, TargetPersona, BuyingTrigger
 
 const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
 
+export interface CampaignOptions {
+    personaVariations: TargetPersona[];
+    strategicAngles: string[];
+    buyingTriggers: BuyingTriggerObject[];
+}
+
 const imageB64ToGenerativePart = (base64Data: string, mimeType: string = 'image/jpeg') => {
   return {
     inlineData: {
@@ -87,21 +93,6 @@ export const extractAnchorFromText = async (textInput: string): Promise<{ produc
     }
 };
 
-// --- EXISTING SERVICES ---
-
-export interface CampaignOptions {
-    personaVariations: TargetPersona[];
-    strategicAngles: string[];
-    buyingTriggers: BuyingTriggerObject[];
-}
-
-export const CAROUSEL_ARCS = {
-    'PAS': 'Problem, Agitate, Solution',
-    'Transformation': 'Before, After, Mechanism',
-    'Educational': 'Hook, Myth, Truth, Tip',
-    'Testimonial Story': 'Quote, Story, Result'
-};
-
 // --- THE UGLIFIER ENGINE ---
 const getFormatDirectives = (format: string) => {
     switch (format) {
@@ -145,8 +136,10 @@ export const generateHypothesisImage = async (slot: MatrixSlot, productInfo: str
     
     const INDONESIAN_CONTEXT = "Context: Indonesia. Use local housing architecture (ceramic tiles, gypsum ceiling), local skin tones (Southeast Asian), and modest styling.";
 
+    // Critical: Explicitly forbid text rendering because we use Native Overlay
     const prompt = `
-    ROLE: You are a specialized photographer tasked with creating a specific visual asset for an ad campaign.
+    Create a photo for a social media ad.
+    ASPECT RATIO: 9:16 (Vertical Mobile Wallpaper).
     
     THE SCENE:
     - Subject: ${slot.persona.replace(/_/g, ' ')}
@@ -159,8 +152,9 @@ export const generateHypothesisImage = async (slot: MatrixSlot, productInfo: str
     PRODUCT CONTEXT:
     ${productInfo}
 
-    TEXT OVERLAY CONTEXT (Do not render text, but match the vibe):
-    The image will have a text overlay saying: "${hook}"
+    CRITICAL INSTRUCTION:
+    DO NOT RENDER ANY TEXT. DO NOT ADD CAPTIONS. DO NOT ADD LOGOS.
+    The image must be clean because text will be added programmatically later.
     
     THE UGLIFIER DIRECTIVES (STRICTLY FOLLOW):
     ${formatDirective}
@@ -168,24 +162,25 @@ export const generateHypothesisImage = async (slot: MatrixSlot, productInfo: str
     LOCALIZATION:
     ${INDONESIAN_CONTEXT}
     
-    NEGATIVE PROMPT: text, watermark, logo, illustration, painting, 3d render, cartoon, anime, deformed, distorted faces.
+    NEGATIVE PROMPT: text, watermark, logo, letters, alphabet, signage, illustration, painting, 3d render, cartoon, anime, deformed, distorted faces.
     `;
 
     try {
+        // Switch to gemini-2.5-flash-image (Nano Banana) as requested
         const response = await ai.models.generateContent({
             model: 'gemini-2.5-flash-image',
-            contents: [{ parts: [{ text: prompt }] }],
-            config: { responseModalities: [Modality.IMAGE] },
+            contents: { parts: [{ text: prompt }] },
+            config: {
+                responseModalities: [Modality.IMAGE],
+            }
         });
 
-        const responseParts = response.candidates?.[0]?.content?.parts;
-        if (responseParts) {
-            for (const part of responseParts) {
-                if (part.inlineData) {
-                    return `data:${part.inlineData.mimeType};base64,${part.inlineData.data}`;
-                }
-            }
+        const part = response.candidates?.[0]?.content?.parts?.find(p => p.inlineData);
+        
+        if (part && part.inlineData && part.inlineData.data) {
+             return `data:${part.inlineData.mimeType || 'image/jpeg'};base64,${part.inlineData.data}`;
         }
+        
         throw new Error('No image data returned');
     } catch (e: any) {
         console.error("Hypothesis generation failed:", e);
@@ -208,122 +203,63 @@ export const roastHypothesis = async (imageBase64: string, hook: string) => {
     Output JSON only.
     `;
 
-    const response = await ai.models.generateContent({
-        model: 'gemini-2.5-flash',
-        contents: [{ parts: [imagePart, { text: prompt }] }],
-        config: {
-            responseMimeType: "application/json",
-             responseSchema: {
-                type: Type.OBJECT,
-                properties: {
-                    vibe: { type: Type.STRING },
-                    targetAudience: { type: Type.STRING },
-                    thumbstopScore: { type: Type.NUMBER },
-                    critique: { type: Type.STRING }
-                }
-            }
-        }
-    });
-
-    return JSON.parse(response.text);
-};
-
-// Legacy support for initial analysis
-export const analyzeProductContext = async (text: string): Promise<any> => {
-    // simplified placeholder for the new flow
-    return { productAnalysis: { name: "Product", keyBenefit: text } }; 
-};
-
-// --- NEW CAMPAIGN GENERATION SERVICES ---
-
-export const generateCampaignOptions = async (blueprint: CampaignBlueprint): Promise<CampaignOptions> => {
-    const prompt = `
-    Analyze this product and persona to generate ad campaign variations.
-    Product: ${blueprint.productAnalysis.name} - ${blueprint.productAnalysis.keyBenefit}
-    Persona: ${blueprint.targetPersona.description}
-    
-    Generate JSON with:
-    1. personaVariations: 3 specific sub-personas (TargetPersona objects).
-    2. strategicAngles: 5 distinct marketing angles (strings).
-    3. buyingTriggers: 5 psychological triggers (objects with name and example).
-    `;
-    
-    try {
-        const response = await ai.models.generateContent({
-            model: 'gemini-2.5-flash',
-            contents: [{ parts: [{ text: prompt }] }],
-            config: { responseMimeType: "application/json" }
-        });
-        
-        if (response.text) {
-            return JSON.parse(response.text) as CampaignOptions;
-        }
-    } catch (e) {
-        console.error("Error generating campaign options", e);
-    }
-    
-    // Fallback
-    return {
-        personaVariations: [
-            { ...blueprint.targetPersona, description: "Busy Professional" },
-            { ...blueprint.targetPersona, description: "Budget Conscious Student" },
-            { ...blueprint.targetPersona, description: "Gift Buyer" }
-        ],
-        strategicAngles: ["Efficiency", "Cost Savings", "Social Status", "Health", "FOMO"],
-        buyingTriggers: [
-            { name: "Scarcity", example: "Limited stock" },
-            { name: "Authority", example: "Doctor recommended" },
-            { name: "Social Proof", example: "5000+ reviews" }
-        ]
-    };
-};
-
-export const refineVisualPrompt = async (concept: AdConcept, blueprint: CampaignBlueprint): Promise<string> => {
-    const prompt = `
-    Refine this visual prompt for an image generation model.
-    Current Prompt: ${concept.visualPrompt}
-    Headline: ${concept.headline}
-    Format: ${concept.format}
-    Style: ${blueprint.adDna.visualStyle}
-    
-    Make it detailed, describing lighting, composition, and subject.
-    `;
-    
-    try {
-         const response = await ai.models.generateContent({
-            model: 'gemini-2.5-flash',
-            contents: [{ parts: [{ text: prompt }] }],
-        });
-        return response.text || concept.visualPrompt;
-    } catch (e) {
-        return concept.visualPrompt;
-    }
-};
-
-export const getDesignSuggestions = async (concept: AdConcept, imageBase64: string, blueprint: CampaignBlueprint): Promise<{headlineStyle: TextStyle, textOverlayStyle: TextStyle}> => {
-     const prompt = `
-    Analyze this image and suggest optimal text placement for an ad overlay.
-    Headline: "${concept.hook}"
-    Subtext: "${concept.headline}"
-    
-    Return JSON with 'headlineStyle' and 'textOverlayStyle' (TextStyle objects with fontFamily, fontSize, color, top, left, width, textAlign, textShadow, lineHeight).
-    Ensure high contrast against the background.
-    `;
-    
-    const imagePart = imageB64ToGenerativePart(imageBase64);
-    
     try {
         const response = await ai.models.generateContent({
             model: 'gemini-2.5-flash',
             contents: [{ parts: [imagePart, { text: prompt }] }],
-            config: { responseMimeType: "application/json" }
+            config: {
+                responseMimeType: "application/json",
+                responseSchema: {
+                    type: Type.OBJECT,
+                    properties: {
+                        vibe: { type: Type.STRING },
+                        targetAudience: { type: Type.STRING },
+                        thumbstopScore: { type: Type.NUMBER },
+                        critique: { type: Type.STRING }
+                    }
+                }
+            }
         });
         return JSON.parse(response.text);
     } catch (e) {
-        // Fallback styles
-        return {
-            headlineStyle: { fontFamily: 'Arial', fontSize: 6, fontWeight: 'bold', color: '#ffffff', top: 10, left: 5, width: 90, textAlign: 'center', textShadow: '2px 2px 4px rgba(0,0,0,0.8)', lineHeight: 1.2 },
-            textOverlayStyle: { fontFamily: 'Arial', fontSize: 4, fontWeight: 'normal', color: '#ffffff', top: 80, left: 5, width: 90, textAlign: 'center', textShadow: '1px 1px 2px rgba(0,0,0,0.8)', lineHeight: 1.2 }
-        };
+        console.error("Roast failed", e);
+        return { vibe: "Error", targetAudience: "Unknown", thumbstopScore: 0, critique: "AI failed to roast this image." };
     }
 };
+
+export const generateHookVariations = async (originalHook: string, productContext: string): Promise<string[]> => {
+    const prompt = `
+    You are a Direct Response Copywriter.
+    Product: ${productContext}
+    Original Winning Hook: "${originalHook}"
+    
+    Generate 3 NEW distinct variations of this hook using different angles (e.g., Urgency, Curiosity, Benefit).
+    Keep them short (under 10 words).
+    Return a JSON array of strings.
+    `;
+
+    try {
+         const response = await ai.models.generateContent({
+            model: 'gemini-2.5-flash',
+            contents: [{ parts: [{ text: prompt }] }],
+            config: {
+                responseMimeType: "application/json",
+                responseSchema: {
+                    type: Type.ARRAY,
+                    items: { type: Type.STRING }
+                }
+            }
+        });
+        return JSON.parse(response.text);
+    } catch (e) {
+        console.error("Hook variation failed", e);
+        return [originalHook + " (V1)", originalHook + " (V2)", originalHook + " (V3)"];
+    }
+};
+
+// Legacy services
+export const generateCampaignOptions = async (blueprint: CampaignBlueprint): Promise<CampaignOptions> => {
+    return { personaVariations: [], strategicAngles: [], buyingTriggers: [] };
+};
+export const refineVisualPrompt = async (concept: AdConcept, blueprint: CampaignBlueprint): Promise<string> => { return ""; };
+export const getDesignSuggestions = async (concept: AdConcept, imageBase64: string, blueprint: CampaignBlueprint): Promise<any> => { return {}; };

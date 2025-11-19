@@ -1,78 +1,218 @@
+
 import JSZip from 'jszip';
 import saveAs from 'file-saver';
-import { AdConcept, TextStyle } from '../types';
+import { Hypothesis, OverlayConfig, AdConcept, TextStyle } from '../types';
 
-// Helper to convert data URL to blob
-export const dataURLtoBlob = (dataurl: string) => {
-    const arr = dataurl.split(',');
-    if (arr.length < 2) {
-        return null;
-    }
-    const mimeMatch = arr[0].match(/:(.*?);/);
-    if (!mimeMatch) {
-        return null;
-    }
-    const mime = mimeMatch[1];
-    const bstr = atob(arr[1]);
-    let n = bstr.length;
-    const u8arr = new Uint8Array(n);
-    while (n--) {
-        u8arr[n] = bstr.charCodeAt(n);
-    }
-    return new Blob([u8arr], { type: mime });
-}
+// Draw text on canvas with native social media styling
+const drawOverlay = (ctx: CanvasRenderingContext2D, canvas: HTMLCanvasElement, overlay: OverlayConfig) => {
+    const { text, style, yPosition } = overlay;
+    const y = (yPosition / 100) * canvas.height;
+    const x = canvas.width / 2;
+    const maxWidth = canvas.width * 0.8;
 
-// --- Fungsi Baru untuk Menggabungkan Teks ke Gambar ---
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
 
-function parseTextShadow(shadow: string): { offsetX: number; offsetY: number; blur: number; color: string } {
-    // Parser sederhana untuk '2px 2px 4px rgba(0,0,0,0.7)'
-    const parts = shadow.match(/(-?\d*\.?\d+px)|(rgba?\(.+?\))/g);
-    if (!parts || parts.length < 4) {
-        return { offsetX: 0, offsetY: 0, blur: 0, color: 'transparent' };
-    }
-    return {
-        offsetX: parseFloat(parts[0]),
-        offsetY: parseFloat(parts[1]),
-        blur: parseFloat(parts[2]),
-        color: parts[3],
-    };
-}
+    if (style === 'IG_Story') {
+        // Instagram Modern Style
+        const fontSize = canvas.width * 0.08;
+        ctx.font = `900 ${fontSize}px 'Inter', sans-serif`; // Modern sans
+        
+        // Split text into lines
+        const words = text.split(' ');
+        let line = '';
+        const lines = [];
+        for(let n = 0; n < words.length; n++) {
+            const testLine = line + words[n] + ' ';
+            const metrics = ctx.measureText(testLine);
+            if (metrics.width > maxWidth && n > 0) {
+                lines.push(line);
+                line = words[n] + ' ';
+            } else {
+                line = testLine;
+            }
+        }
+        lines.push(line);
 
-const createFallbackStyle = (type: 'hook' | 'headline'): TextStyle => {
-    if (type === 'hook') {
-        return {
-            fontFamily: 'Poppins',
-            fontSize: 7, // vw
-            fontWeight: '900',
-            color: '#FFFFFF',
-            top: 40,
-            left: 10,
-            width: 80,
-            textAlign: 'center',
-            textShadow: '3px 3px 6px rgba(0,0,0,0.8)',
-            lineHeight: 1.1,
-        };
-    } else { // headline
-        return {
-            fontFamily: 'Montserrat',
-            fontSize: 4, // vw
-            fontWeight: '700',
-            color: '#FFFFFF',
-            top: 55,
-            left: 10,
-            width: 80,
-            textAlign: 'center',
-            textShadow: '2px 2px 4px rgba(0,0,0,0.7)',
-            lineHeight: 1.2,
-        };
+        // Draw rounded background per line
+        lines.forEach((l, i) => {
+            const lineY = y + (i * fontSize * 1.2);
+            const metrics = ctx.measureText(l);
+            const bgWidth = metrics.width + (fontSize * 0.5);
+            const bgHeight = fontSize * 1.2;
+            
+            ctx.fillStyle = 'white';
+            ctx.roundRect(x - bgWidth/2, lineY - bgHeight/2, bgWidth, bgHeight, 10);
+            ctx.fill();
+            
+            ctx.fillStyle = 'black';
+            ctx.fillText(l, x, lineY);
+        });
+
+    } else if (style === 'TikTok_Modern') {
+        // TikTok Style (White text, black outline/shadow)
+        const fontSize = canvas.width * 0.07;
+        ctx.font = `700 ${fontSize}px 'Proxima Nova', 'Arial', sans-serif`;
+        ctx.fillStyle = 'white';
+        ctx.shadowColor = 'black';
+        ctx.shadowBlur = 4;
+        ctx.shadowOffsetX = 2;
+        ctx.shadowOffsetY = 2;
+
+        const words = text.split(' ');
+        let line = '';
+        let lineY = y;
+        
+        for(let n = 0; n < words.length; n++) {
+            const testLine = line + words[n] + ' ';
+            const metrics = ctx.measureText(testLine);
+            if (metrics.width > maxWidth && n > 0) {
+                ctx.strokeText(line, x, lineY);
+                ctx.fillText(line, x, lineY);
+                line = words[n] + ' ';
+                lineY += fontSize * 1.2;
+            } else {
+                line = testLine;
+            }
+        }
+        ctx.strokeText(line, x, lineY);
+        ctx.fillText(line, x, lineY);
+
+    } else if (style === 'Meme_Impact') {
+        // Impact Font (Top/Bottom text style)
+        const fontSize = canvas.width * 0.1;
+        ctx.font = `900 ${fontSize}px 'Impact', 'Oswald', sans-serif`;
+        ctx.fillStyle = 'white';
+        ctx.strokeStyle = 'black';
+        ctx.lineWidth = fontSize * 0.08;
+        ctx.shadowBlur = 0;
+
+        // Wrap text
+        const words = text.toUpperCase().split(' ');
+        let line = '';
+        const lines = [];
+        for(let n = 0; n < words.length; n++) {
+            const testLine = line + words[n] + ' ';
+            const metrics = ctx.measureText(testLine);
+            if (metrics.width > maxWidth && n > 0) {
+                lines.push(line);
+                line = words[n] + ' ';
+            } else {
+                line = testLine;
+            }
+        }
+        lines.push(line);
+
+        lines.forEach((l, i) => {
+            const lineY = y + (i * fontSize * 1.1);
+            ctx.strokeText(l, x, lineY);
+            ctx.fillText(l, x, lineY);
+        });
     }
 };
 
+// Helper for AdConcept text overlay
+const drawTextOverlay = (ctx: CanvasRenderingContext2D, canvas: HTMLCanvasElement, text: string, style?: TextStyle) => {
+    if (!style) return;
+    // Basic implementation using style properties
+    const fontSize = (style.fontSize / 100) * canvas.width;
+    ctx.font = `${style.fontWeight} ${fontSize}px ${style.fontFamily}`;
+    ctx.fillStyle = style.color;
+    ctx.textAlign = style.textAlign as CanvasTextAlign;
+    // x, y based on percentages
+    const x = (style.left / 100) * canvas.width;
+    const y = (style.top / 100) * canvas.height;
+    
+    // Basic Text Fill
+    ctx.fillText(text, x, y + fontSize); // simple baseline adjustment
+}
 
-export const compositeTextOnImage = async (
-    baseImageUrl: string,
-    hook: { text?: string; style?: TextStyle },
-    headline: { text?: string; style?: TextStyle }
+export const compositeHypothesisImage = async (hypothesis: Hypothesis): Promise<Blob | null> => {
+    if (!hypothesis.imageUrl) return null;
+
+    return new Promise((resolve) => {
+        const img = new Image();
+        img.crossOrigin = "anonymous";
+        img.onload = () => {
+            const canvas = document.createElement('canvas');
+            canvas.width = img.naturalWidth;
+            canvas.height = img.naturalHeight;
+            const ctx = canvas.getContext('2d');
+            
+            if (!ctx) { resolve(null); return; }
+
+            // Draw base image
+            ctx.drawImage(img, 0, 0);
+
+            // Draw Overlay if enabled
+            if (hypothesis.overlay && hypothesis.overlay.enabled) {
+                drawOverlay(ctx, canvas, hypothesis.overlay);
+            }
+
+            canvas.toBlob((blob) => {
+                resolve(blob);
+            }, 'image/jpeg', 0.95);
+        };
+        img.src = hypothesis.imageUrl;
+    });
+};
+
+export const exportHypothesesToZip = async (hypotheses: Hypothesis[], campaignName: string) => {
+    const zip = new JSZip();
+    const csvRows = [];
+    
+    // CSV Header
+    csvRows.push(['Campaign', 'Slot', 'Format', 'Persona', 'Hook', 'Roast Score', 'Vibe', 'Filename'].join(','));
+
+    const validHypotheses = hypotheses.filter(h => h.imageUrl);
+    if (validHypotheses.length === 0) throw new Error("No generated images to export.");
+
+    for (const h of validHypotheses) {
+        const blob = await compositeHypothesisImage(h);
+        if (blob) {
+            const filename = `${campaignName}_${h.slotId}_${h.matrixConfig.format}.jpg`;
+            zip.file(filename, blob);
+
+            csvRows.push([
+                `"${campaignName}"`,
+                `"${h.slotId}"`,
+                `"${h.matrixConfig.format}"`,
+                `"${h.matrixConfig.persona}"`,
+                `"${h.hook.replace(/"/g, '""')}"`,
+                `"${h.aiRoast?.thumbstopScore || 0}"`,
+                `"${h.aiRoast?.vibe || ''}"`,
+                `"${filename}"`
+            ].join(','));
+        }
+    }
+
+    zip.file('ads_manager_import.csv', csvRows.join('\n'));
+
+    const content = await zip.generateAsync({ type: 'blob' });
+    saveAs(content, `${campaignName}_CreativeOS_Export.zip`);
+};
+
+export const dataURLtoBlob = (dataurl: string): Blob | null => {
+    try {
+        const arr = dataurl.split(',');
+        const mimeMatch = arr[0].match(/:(.*?);/);
+        const mime = mimeMatch ? mimeMatch[1] : 'image/jpeg';
+        const bstr = atob(arr[1]);
+        let n = bstr.length;
+        const u8arr = new Uint8Array(n);
+        while (n--) {
+            u8arr[n] = bstr.charCodeAt(n);
+        }
+        return new Blob([u8arr], { type: mime });
+    } catch (e) {
+        console.error("Error converting data URL to blob", e);
+        return null;
+    }
+};
+
+export const compositeTextOnImage = async (imageUrl: string, 
+    hookData: { text?: string; style?: TextStyle }, 
+    headlineData: { text?: string; style?: TextStyle }
 ): Promise<string> => {
     return new Promise((resolve, reject) => {
         const img = new Image();
@@ -82,164 +222,37 @@ export const compositeTextOnImage = async (
             canvas.width = img.naturalWidth;
             canvas.height = img.naturalHeight;
             const ctx = canvas.getContext('2d');
-            if (!ctx) {
-                return reject(new Error('Could not get canvas context'));
-            }
-
+            if (!ctx) { reject("No context"); return; }
+            
             ctx.drawImage(img, 0, 0);
-
-            const wrapText = (context: CanvasRenderingContext2D, text: string, x: number, y: number, maxWidth: number, lineHeight: number) => {
-                const words = text.split(' ');
-                let line = '';
-                for (let n = 0; n < words.length; n++) {
-                    const testLine = line + words[n] + ' ';
-                    const metrics = context.measureText(testLine);
-                    const testWidth = metrics.width;
-                    if (testWidth > maxWidth && n > 0) {
-                        context.fillText(line, x, y);
-                        line = words[n] + ' ';
-                        y += lineHeight;
-                    } else {
-                        line = testLine;
-                    }
-                }
-                context.fillText(line, x, y);
-            };
-
-            const overlays = [];
-            if (hook.text) {
-                overlays.push({ text: hook.text, style: hook.style || createFallbackStyle('hook') });
+            
+            if (hookData.text && hookData.style) {
+                drawTextOverlay(ctx, canvas, hookData.text, hookData.style);
             }
-            if (headline.text) {
-                overlays.push({ text: headline.text, style: headline.style || createFallbackStyle('headline') });
+            if (headlineData.text && headlineData.style) {
+                drawTextOverlay(ctx, canvas, headlineData.text, headlineData.style);
             }
-
-            overlays.forEach(overlay => {
-                const style = overlay.style;
-                const fontSizePx = (style.fontSize / 100) * canvas.width; // Convert vw to pixels
-                ctx.font = `${style.fontWeight} ${fontSizePx}px "${style.fontFamily}"`;
-                ctx.fillStyle = style.color;
-                ctx.textAlign = style.textAlign;
-
-                const shadow = parseTextShadow(style.textShadow);
-                ctx.shadowColor = shadow.color;
-                ctx.shadowOffsetX = shadow.offsetX;
-                ctx.shadowOffsetY = shadow.offsetY;
-                ctx.shadowBlur = shadow.blur;
-
-                const x = (style.left / 100) * canvas.width;
-                const y = (style.top / 100) * canvas.height;
-                const maxWidth = (style.width / 100) * canvas.width;
-                const lineHeight = fontSizePx * style.lineHeight;
-                
-                let drawX = x;
-                if(style.textAlign === 'center') {
-                    drawX = x + maxWidth / 2;
-                } else if(style.textAlign === 'right') {
-                    drawX = x + maxWidth;
-                }
-                
-                wrapText(ctx, overlay.text, drawX, y + fontSizePx, maxWidth, lineHeight);
-            });
             
             resolve(canvas.toDataURL('image/jpeg', 0.95));
         };
-        img.onerror = () => {
-            reject(new Error('Failed to load image for canvas compositing'));
-        };
-        img.src = baseImageUrl;
+        img.onerror = reject;
+        img.src = imageUrl;
     });
 };
 
-
 export const exportConceptsToZip = async (concepts: AdConcept[]) => {
     const zip = new JSZip();
-    const csvData = [];
     
-    // CSV Header
-    csvData.push([
-        'Ad Set Name',
-        'Status',
-        'Entry Point',
-        'Persona',
-        'Angle',
-        'Trigger',
-        'Format',
-        'Placement',
-        'Hook',
-        'Headline',
-        'Visual Prompt',
-        'Image Files'
-    ].join(','));
-
-    for (const concept of concepts) {
-        if (!concept.imageUrls || concept.imageUrls.length === 0) continue;
-        
-        const folderName = concept.adSetName.replace(/[/\\?%*:|"<>]/g, '-'); // Sanitize folder name
-        const folder = zip.folder(folderName);
-        if (!folder) continue;
-
-        const imageFiles: string[] = [];
-
-        for (let i = 0; i < concept.imageUrls.length; i++) {
-            const imageUrl = concept.imageUrls[i];
-            
-            const currentSlide = (concept.placement === 'Carousel' && concept.carouselSlides) ? concept.carouselSlides[i] : concept;
-
-            const compositedImage = await compositeTextOnImage(
-                imageUrl,
-                { text: currentSlide?.hook, style: concept.headlineStyle },
-                { text: currentSlide?.headline, style: concept.textOverlayStyle }
-            );
-
-            const blob = dataURLtoBlob(compositedImage);
-
+    for (let i = 0; i < concepts.length; i++) {
+        const c = concepts[i];
+        if (c.imageUrls && c.imageUrls.length > 0) {
+            // Save first image for now
+            const blob = dataURLtoBlob(c.imageUrls[0]); 
             if (blob) {
-                const extension = 'jpeg'; // Composited image is always jpeg
-                const filename = `image_${i + 1}.${extension}`;
-                folder.file(filename, blob);
-                imageFiles.push(`${folderName}/${filename}`);
+                zip.file(`${c.adSetName}_${i}.jpg`, blob);
             }
         }
-        
-        // Add concept data to CSV
-        csvData.push([
-            `"${concept.adSetName}"`,
-            `"${concept.performanceData?.status || 'Pending'}"`,
-            `"${concept.entryPoint}"`,
-            `"${concept.personaDescription}"`,
-            `"${concept.angle}"`,
-            `"${concept.trigger.name}"`,
-            `"${concept.format}"`,
-            `"${concept.placement}"`,
-            `"${concept.hook.replace(/"/g, '""')}"`,
-            `"${concept.headline.replace(/"/g, '""')}"`,
-            `"${concept.visualPrompt.replace(/"/g, '""')}"`,
-            `"${imageFiles.join(', ')}"`
-        ].join(','));
-        
-        // Add a text file with details inside each concept's folder
-        let details = `Ad Set Name: ${concept.adSetName}\n`;
-        details += `Status: ${concept.performanceData?.status || 'Pending'}\n`;
-        details += `Entry Point: ${concept.entryPoint}\n\n`;
-        details += `Persona: ${concept.personaDescription}\n`;
-        details += `Angle: ${concept.angle}\n`;
-        details += `Trigger: ${concept.trigger.name}\n`;
-        details += `Format: ${concept.format}\n`;
-        details += `Placement: ${concept.placement}\n\n`;
-        details += `Hook: ${concept.hook}\n`;
-        details += `Headline: ${concept.headline}\n\n`;
-        details += `Visual Prompt:\n${concept.visualPrompt}\n`;
-        
-        folder.file('details.txt', details);
     }
-    
-    if (csvData.length > 1) { // more than just the header
-        zip.file('summary.csv', csvData.join('\n'));
-
-        const content = await zip.generateAsync({ type: 'blob' });
-        saveAs(content, `Ad_Concepts_${new Date().toISOString().slice(0,10)}.zip`);
-    } else {
-        alert("Tidak ada konsep dengan gambar yang dipilih untuk diunduh.");
-    }
+    const content = await zip.generateAsync({ type: 'blob' });
+    saveAs(content, `concepts_export.zip`);
 };

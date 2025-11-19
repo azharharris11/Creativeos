@@ -1,8 +1,9 @@
 
 import React, { useRef, useEffect, useState } from 'react';
-import { Hypothesis, MatrixSlot } from '../types';
+import { Hypothesis, MatrixSlot, OverlayConfig, RemixMode } from '../types';
 import { ZoomInIcon, ZoomOutIcon, LocateIcon, CopyIcon, ShieldAlertIcon } from './icons';
 import { MobileFrame } from './MobileFrame';
+import { RemixModal } from './RemixModal';
 
 export interface MindMapCanvasProps {
     hypotheses: Hypothesis[];
@@ -10,19 +11,30 @@ export interface MindMapCanvasProps {
     goldenHook: string;
     onRegenerate: (id: string) => void;
     onRoast: (id: string) => void;
-    onDuplicate: (hypothesis: Hypothesis) => void;
+    onDuplicate: (hypothesis: Hypothesis) => void; // Cluster duplication
+    onRemix: (mode: RemixMode, hypothesis: Hypothesis) => void; // Winner remix
+    onUpdateHypothesis: (id: string, updates: Partial<Hypothesis>) => void;
     onDelete: (id: string) => void;
 }
 
-export const MindMapCanvas: React.FC<MindMapCanvasProps> = ({ hypotheses, productContext, goldenHook, onRegenerate, onRoast, onDuplicate, onDelete }) => {
+export const MindMapCanvas: React.FC<MindMapCanvasProps> = ({ 
+    hypotheses, 
+    productContext, 
+    goldenHook, 
+    onRegenerate, 
+    onRoast, 
+    onDuplicate, 
+    onRemix,
+    onUpdateHypothesis,
+    onDelete 
+}) => {
     const containerRef = useRef<HTMLDivElement>(null);
     const [view, setView] = useState({ x: 0, y: 0, k: 0.5 }); // Start zoomed out
+    const [remixTarget, setRemixTarget] = useState<Hypothesis | null>(null);
     const isDragging = useRef(false);
     const lastPos = useRef({ x: 0, y: 0 });
 
     // Layout Logic: Hub & Spoke
-    // Center: Anchor
-    // Spokes: Hypotheses arranged in a circle/grid
     const getPositions = () => {
         const centerX = 0;
         const centerY = 0;
@@ -67,15 +79,37 @@ export const MindMapCanvas: React.FC<MindMapCanvasProps> = ({ hypotheses, produc
     useEffect(() => {
         const el = containerRef.current;
         if (!el) return;
-        const handleMouseDown = (e: MouseEvent) => { if ((e.target as HTMLElement).closest('.interactive-node')) return; isDragging.current = true; lastPos.current = { x: e.clientX, y: e.clientY }; el.style.cursor = 'grabbing'; };
+        const handleMouseDown = (e: MouseEvent) => { 
+            if ((e.target as HTMLElement).closest('.interactive-node')) return; 
+            isDragging.current = true; 
+            lastPos.current = { x: e.clientX, y: e.clientY }; 
+            el.style.cursor = 'grabbing'; 
+        };
         const handleMouseUp = () => { isDragging.current = false; el.style.cursor = 'grab'; };
-        const handleMouseMove = (e: MouseEvent) => { if (!isDragging.current) return; const dx = e.clientX - lastPos.current.x; const dy = e.clientY - lastPos.current.y; setView(v => ({ ...v, x: v.x + dx, y: v.y + dy })); lastPos.current = { x: e.clientX, y: e.clientY }; };
-        const handleWheel = (e: WheelEvent) => { e.preventDefault(); const scaleAmount = 1 - e.deltaY * 0.001; const rect = el.getBoundingClientRect(); const mouseX = e.clientX - rect.left; const mouseY = e.clientY - rect.top; setView(v => { const newK = Math.max(0.2, Math.min(2, v.k * scaleAmount)); const newX = v.x - (mouseX - v.x) * (newK / v.k - 1); const newY = v.y - (mouseY - v.y) * (newK / v.k - 1); return { x: newX, y: newY, k: newK }; }); };
+        const handleMouseMove = (e: MouseEvent) => { 
+            if (!isDragging.current) return; 
+            const dx = e.clientX - lastPos.current.x; 
+            const dy = e.clientY - lastPos.current.y; 
+            setView(v => ({ ...v, x: v.x + dx, y: v.y + dy })); 
+            lastPos.current = { x: e.clientX, y: e.clientY }; 
+        };
+        const handleWheel = (e: WheelEvent) => { 
+            e.preventDefault(); 
+            const scaleAmount = 1 - e.deltaY * 0.001; 
+            const rect = el.getBoundingClientRect(); 
+            const mouseX = e.clientX - rect.left; 
+            const mouseY = e.clientY - rect.top; 
+            setView(v => { 
+                const newK = Math.max(0.2, Math.min(2, v.k * scaleAmount)); 
+                const newX = v.x - (mouseX - v.x) * (newK / v.k - 1); 
+                const newY = v.y - (mouseY - v.y) * (newK / v.k - 1); 
+                return { x: newX, y: newY, k: newK }; 
+            }); 
+        };
         el.addEventListener('mousedown', handleMouseDown); window.addEventListener('mouseup', handleMouseUp); window.addEventListener('mousemove', handleMouseMove); el.addEventListener('wheel', handleWheel); el.style.cursor = 'grab';
         return () => { el.removeEventListener('mousedown', handleMouseDown); window.removeEventListener('mouseup', handleMouseUp); window.removeEventListener('mousemove', handleMouseMove); el.removeEventListener('wheel', handleWheel); };
     }, []);
 
-    // Initial Center
     useEffect(() => { if(containerRef.current) { const { width, height } = containerRef.current.getBoundingClientRect(); setView(v => ({...v, x: width / 2, y: height / 2})); } }, []);
 
     return (
@@ -156,12 +190,24 @@ export const MindMapCanvas: React.FC<MindMapCanvasProps> = ({ hypotheses, produc
                                 onRegenerate={() => onRegenerate(h.id)} 
                                 onRoast={() => onRoast(h.id)}
                                 onDelete={() => onDelete(h.id)}
+                                onRemix={() => setRemixTarget(h)}
+                                onUpdateOverlay={(config) => onUpdateHypothesis(h.id, { overlay: config })}
                             />
                         </div>
                     </div>
                 ))}
-
             </div>
+
+             {remixTarget && (
+                <RemixModal 
+                    hypothesis={remixTarget} 
+                    onClose={() => setRemixTarget(null)} 
+                    onConfirm={(mode) => {
+                        onRemix(mode, remixTarget);
+                        setRemixTarget(null);
+                    }} 
+                />
+            )}
         </div>
     );
 };
