@@ -87,104 +87,130 @@ export const extractAnchorFromText = async (textInput: string): Promise<{ produc
     }
 };
 
-// --- THE UGLIFIER ENGINE 3.2 (Enhanced Anchoring & Clean Plate) ---
+// --- THE UGLIFIER ENGINE 4.1 (Baked-In Text Support) ---
 
-const getFormatDirectives = (format: string, hookText: string) => {
+// List of formats where AI should write the text into the image
+const TEXT_RENDER_FORMATS = [
+    'Handwritten_Whiteboard',
+    'Billboard_Context',
+    'MS_Paint_Nostalgia',
+    'Big_Font_Impact',
+    'Meme_Format',
+    'Cartoonic_Graphic'
+];
+
+const getFormatDirectives = (format: string, hook: string) => {
     switch (format) {
-        case 'Ugly_Problem_Visual':
-            return `
-            STYLE: Raw, unflattering, problem-focused photography.
-            CONTENT: Show the messy, ugly truth of the problem (e.g., messy room, acne skin, dirty floor).
-            VIBE: "I struggle with this too". Authentic and relatable.
-            QUALITY: Low fidelity, amateur shot, bad angle.
-            CLEAN PLATE: No specific requirement, but keep it messy.
-            `;
-        case 'Billboard_Context':
-            return `
-            STYLE: A photo of a roadside billboard or shop sign.
-            POV: Shot from a moving car window or street level (low angle).
-            ENVIRONMENT: Gritty urban street, cloudy sky, power lines visible.
-            CLEAN PLATE: CRITICAL. The billboard surface must be PLAIN WHITE or SOLID COLOR. It must be a blank canvas ready for text. Do not put gibberish text on it.
-            `;
-        case 'MS_Paint_Nostalgia':
-            return `
-            STYLE: "Graphic design is my passion" meme aesthetic. Windows 95 vibe.
-            ELEMENTS: Clashing colors (Red/Yellow/Blue), pixelated edges, jagged cutout of the product.
-            COMPOSITION: Intentionally bad design.
-            CLEAN PLATE: Use a solid color background (like pure bright blue #0000FF or yellow).
-            `;
-        case 'Instagram_Story_UX':
-            return `
-            STYLE: Mimics a raw photo taken natively inside the Instagram Story camera.
-            CONTENT: A simple background (desk, floor, wall).
-            VIBE: Native trust. "This is a friend's update".
-            CLEAN PLATE: Ensure the top and bottom thirds of the image are relatively empty to allow for UI overlays.
-            `;
+        // ---------------------------------------------------------
+        // CATEGORY 1: TEXTURE / CANVAS (Clean Plates for Overlay)
+        // ---------------------------------------------------------
+        
         case 'Gmail_Letter_UX':
             return `
-            STYLE: Minimalist digital screenshot.
-            CONTENT: A simple white email body background. Resembles a Gmail read view.
-            VIBE: Intimate, "We need to apologize", "Personal Update".
-            CLEAN PLATE: The main area must be essentially white or very light gray paper texture.
+            TYPE: User Interface Mockup Background.
+            VISUAL: A flat white screen background. 
+            DETAILS: At the very top, hint at a standard email header line (faint grey line with "To: Me"), but keep the main body COMPLETELY WHITE and EMPTY.
+            VIBE: Digital utility, boring, administrative.
+            CRITICAL: Do not render any fake text blocks. Leave the body empty for overlay.
             `;
-        case 'Long_Text_Story':
+            
+        case 'Long_Text_Story': // Notes App style
             return `
-            STYLE: Screenshot of the Apple Notes app (yellow lines) or Notion page.
-            CONTENT: A digital note interface.
-            VIBE: "I'm just jotting down thoughts". Intimate, diary-like.
-            CLEAN PLATE: Render the yellow lined paper or white background, but keep it EMPTY of text so we can add our own.
+            TYPE: Digital Note Interface Background.
+            VISUAL: A macro close-up of a digital screen displaying the 'Apple Notes' texture (faint yellow paper texture) OR a 'Notion' style stark white page.
+            VIBE: Personal diary, rough draft.
+            CRITICAL: It must be a blank page ready for typing. No existing scribbles. No 3D phones. Just the UI texture.
             `;
+
         case 'Reddit_Thread_UX':
             return `
-            STYLE: Screenshot of a Reddit text post (Dark mode or Light mode).
-            CONTENT: Thread title and body.
-            VIBE: Community-driven, Skeptical discussion.
-            CLEAN PLATE: Render the layout of a forum post, but leave the text areas as blocks or very blurred lines.
+            TYPE: Dark Mode UI Background.
+            VISUAL: A dark grey (#1A1A1B) flat background resembling a Reddit thread in dark mode.
+            DETAILS: Faint grey separators lines.
+            CRITICAL: Leave the center area empty for text. No gibberish text generation.
             `;
+
+        // ---------------------------------------------------------
+        // CATEGORY 2: SCENE / PHOTO (Authentic Ugly + Baked Text)
+        // ---------------------------------------------------------
+
         case 'Handwritten_Whiteboard':
             return `
-            STYLE: A photo of a slightly dirty whiteboard in a home office.
-            LIGHTING: Glare from a window, amateur lighting.
-            VIBE: Educational, "Let me explain this", "Quick math".
-            CLEAN PLATE: CRITICAL. The whiteboard must be EMPTY. No existing drawings. Ready for a marker.
+            TYPE: Snapshot of a Whiteboard.
+            VISUAL: A dirty, used whiteboard in a poorly lit home office. 
+            DETAILS: Smudge marks, marker residue, bad overhead fluorescent lighting reflection.
+            TEXT RENDERING: The text "${hook}" MUST be handwritten on the board in black or red marker. It should look messy but legible.
             `;
+
+        case 'Ugly_Problem_Visual':
+            return `
+            TYPE: Amateur Flash Photography (Snapshot).
+            SUBJECT: Focus on the MESS and CHAOS. 
+            DETAILS: If bedroom: Unmade bed, clothes on floor, trash. If skin: extreme close up of texture, oily, pores visible. 
+            LIGHTING: Harsh, direct on-camera flash that creates hard shadows. High contrast.
+            VIBE: Stressful, overwhelming, gross, real life.
+            ANTI-AESTHETIC: Make it look unbalanced and poorly framed.
+            `;
+            
+        case 'Billboard_Context':
+            return `
+            TYPE: Street Photography.
+            SUBJECT: A mundane street corner or roadside with a billboard/signage.
+            TEXT RENDERING: The billboard MUST display the text: "${hook}" in large, bold letters.
+            ENVIRONMENT: Grey skies, concrete, maybe a blurry car passing by. Unremarkable urban setting.
+            `;
+
+        case 'MS_Paint_Nostalgia':
+            return `
+            TYPE: Digital Collage / Glitch Art.
+            VISUAL: A crude cutout of the product placed on a garish, clashing background (e.g., Neon Green or Blue background).
+            TEXT RENDERING: Include the text "${hook}" in a crude font like Comic Sans or Arial, possibly pixelated.
+            STYLE: "Graphic design is my passion" meme style. Pixelated edges.
+            `;
+        
         case 'Big_Font_Impact':
             return `
-            STYLE: A solid, high-contrast background color (e.g., Warning Yellow, Alert Red, or Stark Black).
-            CONTENT: Minimal distraction.
-            VIBE: Warning sign, Pattern Interrupt.
-            CLEAN PLATE: Pure solid color background.
+            TYPE: Text-based Image / Warning Sign.
+            VISUAL: A solid color background (Yellow, Red, or White) or a textured surface (Cardboard, Skin, Paper).
+            TEXT RENDERING: The text "${hook}" MUST be written/printed in HUGE, IMPACTFUL letters filling the frame.
+            VIBE: Urgent, warning, stop scrolling.
             `;
-        case 'CCTV_Security_Footage':
-            return `
-            STYLE: Security camera footage, fisheye lens distortion, black and white or desaturated.
-            ANGLE: High angle looking down (Top-down).
-            VIBE: Voyeuristic, raw, "caught on camera", "secret revealed".
-            `;
-        case 'Direct_Flash_Selfie':
-            return `
-            STYLE: Direct on-camera flash (snapshot aesthetic).
-            LIGHTING: Harsh flash, dark background, hard shadows behind the object.
-            VIBE: Cursed image, viral internet content, chaotic energy.
-            `;
+
         case 'Meme_Format':
             return `
-            STYLE: Classic internet meme template style.
-            CONTENT: A relatable reaction image.
-            VIBE: "Language of the internet".
-            CLEAN PLATE: Leave space at the top or bottom for text caption.
+            TYPE: Classic Internet Meme.
+            VISUAL: A funny or relatable reaction image (e.g., confused person, chaotic scene).
+            TEXT RENDERING: Top Text / Bottom Text style containing: "${hook}".
+            FONT: Impact font, white text with black outline.
             `;
+
+        case 'CCTV_Security_Footage':
+            return `
+            TYPE: Surveillance Camera Feed.
+            VISUAL: High angle (top-down), wide fisheye lens distortion.
+            COLOR: Desaturated, grainy, low resolution, maybe a timestamp in the corner.
+            LIGHTING: Dim, spooky, or harsh industrial lighting.
+            `;
+
+        case 'Direct_Flash_Selfie':
+            return `
+            TYPE: Bad Selfie.
+            VISUAL: Shot from a slightly too-low angle (double chin angle).
+            LIGHTING: "Deer in headlights" look using direct flash in a dark room.
+            SKIN: Shiny, oily, imperfect.
+            BACKGROUND: A boring hallway or messy bathroom mirror.
+            `;
+
         case 'Cartoonic_Graphic':
-            return `
-            STYLE: Simple, crude cartoon or doodle style.
-            CONTENT: A stick figure or simple character dealing with a problem.
-            VIBE: Storytelling, disarming, "inner child".
-            CLEAN PLATE: Leave speech bubbles empty.
-            `;
+             return `
+             TYPE: Crude Doodle on Paper.
+             VISUAL: A drawing on a napkin or notebook paper. Stick figures.
+             TEXT RENDERING: Handwritten text next to the drawing: "${hook}".
+             STYLE: Child-like, simple, black ink on paper.
+             `;
+
         default:
-            return `
-            Style: Amateur, raw, unpolished photography.
-            `;
+            return `STYLE: Amateur phone photo, raw, unedited.`;
     }
 };
 
@@ -199,6 +225,17 @@ export const generateHypothesisImage = async (
     const formatDirective = getFormatDirectives(slot.format, hook);
     const aspectRatio = slot.aspectRatio || '9:16';
     
+    // DETERMINATION LOGIC:
+    // 1. Should we render text? (Billboard, Whiteboard, etc.)
+    const shouldRenderText = TEXT_RENDER_FORMATS.includes(slot.format);
+    
+    // 2. Is it a pure Clean Plate UI? (Gmail, Notes, Reddit) -> Branch 1
+    const isCleanPlateUI = [
+        'Gmail_Letter_UX', 
+        'Long_Text_Story', 
+        'Reddit_Thread_UX'
+    ].includes(slot.format);
+    
     // Dynamic Localization Logic
     const getContext = (country: string) => {
         const countryUpper = country.trim().toUpperCase();
@@ -207,80 +244,96 @@ export const generateHypothesisImage = async (
         if (countryUpper === 'UK') return "Context: UK. Brick walls, cloudy weather, terraced housing interiors.";
         if (countryUpper === 'BRAZIL') return "Context: Brazil. Vibrant colors, tropical urban setting, local street style.";
         if (countryUpper === 'GLOBAL') return "Context: Global D2C. Relatable, non-descript home environments.";
-        
-        // FALLBACK FOR CUSTOM COUNTRIES: Ask AI to infer context
         return `Context: ${country}. Use architecture, lighting, and cultural cues specific to ${country}. Ensure the environment looks authentically local to this region.`;
     };
-
-    // STRONG Object Anchoring Logic & Interaction
-    let visualReferenceInstruction = "";
-    if (visualReference) {
-        visualReferenceInstruction = `
-        CRITICAL INSTRUCTION - PRODUCT FIDELITY:
-        1. You have been provided with a reference image of the PRODUCT.
-        2. You MUST place this EXACT product (same shape, color, label, packaging) into the scene.
-        3. DO NOT HALLUCINATE a different bottle, box, or item. Look at the input image and render THAT object.
-        4. The product should be the focal point.
-        5. ACTION REQUIREMENT: The subject (if present) MUST be interacting with the product (Holding it, pointing at it, applying it). Do not leave the product floating.
-        `;
-    } else {
-        visualReferenceInstruction = `
-        PRODUCT DESCRIPTION:
-        ${productInfo}
-        
-        Since no reference image is provided, generate a realistic product based on the description above. 
-        Ensure it matches the category cues (e.g. Skincare bottle, Supplement jar, Tech gadget).
-        `;
-    }
 
     // Aspect Ratio & Composition Instruction
     let aspectRatioInstruction = `ASPECT RATIO: ${aspectRatio}`;
     if (aspectRatio === '9:16') {
-        aspectRatioInstruction += ". Composition: VERTICAL Mobile Fullscreen. Ensure key elements are central, leaving negative space at TOP and BOTTOM for UI overlays.";
+        aspectRatioInstruction += ". Composition: VERTICAL Mobile Fullscreen.";
     } else if (aspectRatio === '1:1') {
-        aspectRatioInstruction += ". Composition: SQUARE. Center the subject. Tighter framing.";
+        aspectRatioInstruction += ". Composition: SQUARE. Tighter framing.";
     } else if (aspectRatio === '4:5') {
-        aspectRatioInstruction += ". Composition: VERTICAL PORTRAIT. Standard social feed crop.";
+        aspectRatioInstruction += ". Composition: VERTICAL PORTRAIT.";
     }
 
-    // Lighting Sanity Check
-    const lightingInstruction = slot.lighting === 'Harsh_Flash_ON' && (slot.setting === 'Overexposed_Sunlight' || slot.setting === 'Street_Pavement')
-        ? "LIGHTING: Natural sunlight (override harsh flash as it conflicts with setting)"
-        : `LIGHTING: ${slot.lighting.replace(/_/g, ' ')}`;
+    let prompt = "";
+    const parts: any[] = [];
 
-    const prompt = `
-    ROLE: You are a specialized 'Lo-Fi' Social Media Ad photographer.
-    TASK: Create a specific ad creative based on the Matrix configuration below.
-
-    ${visualReferenceInstruction}
-
-    THE MATRIX CONFIGURATION (Execute This):
-    - FORMAT: ${slot.format.replace(/_/g, ' ')}
-    - SETTING: ${slot.setting.replace(/_/g, ' ')} (Background)
-    - ${lightingInstruction}
-    - PERSONA POV: ${slot.pov.replace(/_/g, ' ')} (Camera angle)
-    - ACTION: ${slot.action.replace(/_/g, ' ')} (Interaction with product)
-    - TONE: ${slot.tone.replace(/_/g, ' ')}
-    - ${aspectRatioInstruction}
-
-    THE "UGLY AD" PHILOSOPHY:
-    - The photo must look AMATEUR, RAW, and AUTHENTIC. 
-    - It should look like it was taken by a real person on a phone, not a studio photographer.
+    // Define Negative Prompt dynamically based on text rendering needs
+    let negativePrompt = "professional, studio lighting, bokeh, cinematic, aesthetic, instagrammable, symmetrical, 8k, masterpiece, beautiful, smooth skin, perfect composition, illustration, painting, drawing, cgi, 3d render";
     
-    FORMAT DIRECTIVES:
-    ${formatDirective}
-    
-    LOCALIZATION:
-    ${getContext(targetCountry)}
-    
-    NEGATIVE PROMPT: professional studio, bokeh, cinematic lighting, 8k, masterpiece, perfect skin, makeup, model, symmetrical face, watermark, logo, beautiful, aesthetic, polished, corporate.
-    `;
+    if (isCleanPlateUI) {
+        // For clean plates, FORBID text to keep area empty for overlay
+        negativePrompt += ", text, letters, words, writing, watermark, logo, person, face, hand, object, 3d, realistic scene, landscape, depth of field, blur";
+        
+        // BRANCH 1: TEXTURE/CANVAS GENERATION (Clean Plate)
+        prompt = `
+        TASK: Generate a flat background texture/canvas.
+        ${aspectRatioInstruction}
+        
+        DIRECTIVE:
+        ${formatDirective}
+        
+        NEGATIVE PROMPT: ${negativePrompt}
+        `;
+        parts.push({ text: prompt });
 
-    const parts: any[] = [{ text: prompt }];
-    
-    // Inject Visual Reference if available (Multimodal)
-    if (visualReference) {
-        parts.unshift(imageB64ToGenerativePart(visualReference));
+    } else {
+        // BRANCH 2: SCENE/PHOTO GENERATION (Authentic Ugly + Optional Baked Text)
+        
+        // If standard photo (Ugly Visual) and NOT baked text, prefer no gibberish text
+        if (!shouldRenderText) {
+             negativePrompt += ", watermark, logo, subtitles, caption"; 
+        }
+
+        // STRONG Object Anchoring Logic & Interaction
+        let visualReferenceInstruction = "";
+        const isDigitalCollage = slot.format === 'MS_Paint_Nostalgia';
+
+        if (visualReference) {
+            visualReferenceInstruction = `
+            CRITICAL INSTRUCTION - PRODUCT FIDELITY:
+            1. You have been provided with a reference image of the PRODUCT.
+            2. ${isDigitalCollage ? 'Cut out this product and paste it onto the background.' : 'Place this EXACT product (same shape, color, label) into the scene.'}
+            3. DO NOT HALLUCINATE a different bottle/box. Use the reference.
+            4. ${isDigitalCollage ? '' : 'Subject must be interacting with it (holding, using).'}
+            `;
+            // Add image part
+            parts.push(imageB64ToGenerativePart(visualReference));
+        } else {
+            visualReferenceInstruction = `
+            PRODUCT DESCRIPTION: ${productInfo}
+            Generate a realistic product based on this description.
+            `;
+        }
+
+        prompt = `
+        ROLE: You are an amateur photographer using an old smartphone.
+        TASK: Capture a candid, unpolished moment.
+        ${aspectRatioInstruction}
+
+        SCENE CONFIGURATION:
+        - Subject: ${slot.persona.replace(/_/g, ' ')}
+        - Action: ${slot.action.replace(/_/g, ' ')}
+        - Setting: ${slot.setting.replace(/_/g, ' ')}
+        - Lighting: ${slot.lighting.replace(/_/g, ' ')}
+
+        THE "UGLY" DIRECTIVE (Override all beauty standards):
+        ${formatDirective}
+        
+        ${shouldRenderText ? `TEXT GENERATION TASK:\nThe image MUST contain the text "${hook}" as specified in the directive. Ensure spelling is correct.` : ''}
+
+        PRODUCT INJECTION:
+        ${visualReferenceInstruction}
+
+        LOCALIZATION:
+        ${getContext(targetCountry)}
+        
+        NEGATIVE PROMPT: ${negativePrompt}
+        `;
+        
+        parts.push({ text: prompt });
     }
 
     try {
@@ -432,7 +485,7 @@ export const getDesignSuggestions = async (concept: AdConcept, imageBase64: stri
      - top: number (0-100 percentage)
      - left: number (0-100 percentage)
      - width: number (0-100 percentage)
-     - textAlign: 'left' | 'center' | 'right'
+     - textAlign: { type: Type.STRING, enum: ['left', 'center', 'right'] },
      - textShadow: string (css value or 'none')
      - lineHeight: number
      

@@ -25,11 +25,11 @@ const drawOverlay = (ctx: CanvasRenderingContext2D, canvas: HTMLCanvasElement, o
 
     // Map font family names to actual fonts
     const fontMap: Record<string, string> = {
-        'Classic': 'Inter, sans-serif',
-        'Modern': 'Montserrat, sans-serif',
+        'Classic': 'Poppins, sans-serif', // Updated to match Google Fonts
+        'Modern': 'Montserrat, sans-serif', // Updated
         'Neon': 'Courier New, monospace',
-        'Typewriter': 'Times New Roman, serif',
-        'Meme': 'Impact, Oswald, sans-serif'
+        'Typewriter': 'Roboto, serif', // Updated
+        'Meme': 'Oswald, sans-serif' // Updated
     };
     const actualFont = fontMap[fontFamily] || fontMap['Classic'];
 

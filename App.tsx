@@ -148,7 +148,11 @@ function App() {
   // --- SMART REMIX LOGIC ---
   
   const randomizeVisuals = (config: MatrixSlot): MatrixSlot => {
-      const getRandom = (arr: string[]) => arr[Math.floor(Math.random() * arr.length)];
+      // Helper: Get random item distinct from current value
+      const getDistinctRandom = (arr: string[], currentValue: string) => {
+          const filtered = arr.filter(item => item !== currentValue);
+          return filtered[Math.floor(Math.random() * filtered.length)];
+      };
       
       const settings: MatrixVar_Setting[] = ['Messy_Bedroom', 'Bathroom_Mirror_Dirty', 'Car_Dashboard_Traffic', 'Supermarket_Aisle', 'Street_Pavement', 'Kitchen_Table_Cluttered', 'Blank_Wall_Background'];
       const lightings: MatrixVar_Lighting[] = ['Harsh_Flash_ON', 'Bad_Fluorescent_Office', 'Dim_Bedroom_Lamp', 'Overexposed_Sunlight', 'Screen_Glow_Blue'];
@@ -156,9 +160,9 @@ function App() {
       
       return {
           ...config,
-          setting: getRandom(settings),
-          lighting: getRandom(lightings),
-          pov: getRandom(povs)
+          setting: getDistinctRandom(settings, config.setting),
+          lighting: getDistinctRandom(lightings, config.lighting),
+          pov: getDistinctRandom(povs, config.pov)
       };
   };
 

@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { Hypothesis, OverlayConfig, OverlayStyle } from '../types';
-import { SparklesIcon, HeartIcon, RefreshCwIcon, Trash2Icon, RemixIcon, TypeIcon, DownloadIcon, SlidersIcon, PaletteIcon, AlignLeftIcon, AlignCenterIcon, AlignRightIcon } from './icons';
+import { SparklesIcon, HeartIcon, RefreshCwIcon, Trash2Icon, RemixIcon, TypeIcon, DownloadIcon, SlidersIcon, PaletteIcon, AlignLeftIcon, AlignCenterIcon, AlignRightIcon, LayoutGridIcon } from './icons';
 import { compositeHypothesisImage } from '../services/exportService';
 import saveAs from 'file-saver';
 
@@ -20,6 +20,7 @@ const FONTS = ['Classic', 'Modern', 'Neon', 'Typewriter', 'Meme'];
 export const MobileFrame: React.FC<MobileFrameProps> = ({ hypothesis, onRegenerate, onRoast, onDelete, onRemix, onUpdateOverlay, scale = 1 }) => {
     const [isEditingOverlay, setIsEditingOverlay] = useState(false);
     const [isExporting, setIsExporting] = useState(false);
+    const [showSafeZone, setShowSafeZone] = useState(false);
     
     // Dynamic Aspect Ratio Calculations
     const ratio = hypothesis.matrixConfig.aspectRatio || '9:16';
@@ -28,9 +29,19 @@ export const MobileFrame: React.FC<MobileFrameProps> = ({ hypothesis, onRegenera
     if (ratio === '1:1') frameHeight = 300;
     if (ratio === '4:5') frameHeight = 375;
 
+    // Check if format supports baked-in text (AI writes it)
+    const isNativeTextFormat = [
+        'Big_Font_Impact', 
+        'Billboard_Context', 
+        'Meme_Format',
+        'Handwritten_Whiteboard',
+        'Cartoonic_Graphic'
+    ].includes(hypothesis.matrixConfig.format);
+
     // Initialize config with defaults
+    // Disable overlay by default if it's a native text format to avoid double text
     const [overlayConfig, setOverlayConfig] = useState<OverlayConfig>(() => ({
-        enabled: true,
+        enabled: !isNativeTextFormat,
         text: hypothesis.hook || '',
         style: 'IG_Story',
         yPosition: 50,
@@ -154,6 +165,24 @@ export const MobileFrame: React.FC<MobileFrameProps> = ({ hypothesis, onRegenera
                     
                     {hypothesis.imageUrl && renderOverlayText()}
 
+                    {/* SAFE ZONE OVERLAY */}
+                    {showSafeZone && (
+                        <div className="absolute inset-0 z-30 pointer-events-none">
+                            {/* Top Zone (Profile, Search) */}
+                            <div className="absolute top-0 left-0 w-full h-[15%] bg-red-500/20 border-b border-red-500/50 flex items-center justify-center">
+                                <span className="text-[10px] text-red-200 font-bold uppercase drop-shadow-md">System UI</span>
+                            </div>
+                            {/* Right Zone (Like, Comment, Share buttons) */}
+                            <div className="absolute bottom-[15%] right-0 w-[20%] h-[40%] bg-red-500/20 border-l border-red-500/50 flex items-center justify-center">
+                                <span className="text-[10px] text-red-200 font-bold uppercase -rotate-90 drop-shadow-md">Interaction</span>
+                            </div>
+                            {/* Bottom Zone (Caption, Music, CTA) */}
+                            <div className="absolute bottom-0 left-0 w-full h-[20%] bg-red-500/20 border-t border-red-500/50 flex items-center justify-center">
+                                <span className="text-[10px] text-red-200 font-bold uppercase drop-shadow-md">Caption & CTA</span>
+                            </div>
+                        </div>
+                    )}
+
                     {/* DYNAMIC FAKE UI LAYER */}
                     <div className="absolute inset-0 pointer-events-none z-10 flex flex-col justify-between p-4">
                         {/* Top Bar */}
@@ -201,6 +230,9 @@ export const MobileFrame: React.FC<MobileFrameProps> = ({ hypothesis, onRegenera
                 <div className="flex justify-between items-center pb-2 border-b border-gray-800">
                     <span className="text-[10px] text-gray-500 font-mono uppercase tracking-widest">Slot {hypothesis.slotId} ({ratio})</span>
                     <div className="flex gap-1">
+                         <button onClick={() => setShowSafeZone(!showSafeZone)} className={`p-1.5 rounded ${showSafeZone ? 'bg-red-900/50 text-red-400' : 'bg-gray-800 text-gray-400 hover:text-white'}`} title="Toggle Safe Zone">
+                             <LayoutGridIcon className="w-4 h-4" />
+                         </button>
                          <button onClick={() => setIsEditingOverlay(!isEditingOverlay)} className={`p-1.5 rounded ${isEditingOverlay ? 'bg-indigo-600 text-white' : 'bg-gray-800 text-gray-400 hover:text-white'}`} title="Edit Overlay">
                             <TypeIcon className="w-4 h-4" />
                         </button>

@@ -53,6 +53,19 @@ const SLOT_COLORS = {
     C: 'border-yellow-500/30 bg-yellow-950/10'
 };
 
+// Helper to add visual cues to text formats
+const getFormatIcon = (format: string) => {
+    if (format.includes('Story') || format.includes('Instagram')) return '📱';
+    if (format.includes('Bill')) return '🛣️';
+    if (format.includes('Paint') || format.includes('Cartoon')) return '🎨';
+    if (format.includes('Gmail') || format.includes('Text') || format.includes('Reddit')) return '📝';
+    if (format.includes('CCTV')) return '📹';
+    if (format.includes('Flash')) return '📸';
+    if (format.includes('Impact')) return '💥';
+    if (format.includes('Whiteboard')) return '🖊️';
+    return '🖼️';
+};
+
 // --- SMART CHAOS ENGINE: COMPATIBILITY RULES ---
 // This ensures random generation doesn't create impossible visuals (e.g. CCTV in a Macro Screen)
 
@@ -123,6 +136,32 @@ export const MatrixBuilder: React.FC<MatrixBuilderProps> = ({ onGenerate }) => {
             C: { ...prev.C, aspectRatio: globalAspectRatio }
         }));
     }, [globalAspectRatio]);
+
+    // --- COMPATIBILITY ENFORCER ---
+    // Automatically corrects Setting/Lighting if the User picks a format that demands a specific environment
+    useEffect(() => {
+        const enforceRules = (id: 'A' | 'B' | 'C') => {
+            const format = slots[id].format;
+            
+            // Rule 1: Digital UI formats must be on a Screen or Blank Wall
+            if (['Gmail_Letter_UX', 'Long_Text_Story', 'Reddit_Thread_UX'].includes(format)) {
+                if (slots[id].setting !== 'Computer_Screen_Macro' && slots[id].setting !== 'Blank_Wall_Background') {
+                    setSlots(prev => ({ ...prev, [id]: { ...prev[id], setting: 'Computer_Screen_Macro', lighting: 'Flat_Digital_NoShadow', pov: 'Screen_Screenshot' } }));
+                }
+            }
+
+            // Rule 2: Big Font Impact needs Blank Wall
+            if (format === 'Big_Font_Impact') {
+                if (slots[id].setting !== 'Blank_Wall_Background') {
+                    setSlots(prev => ({ ...prev, [id]: { ...prev[id], setting: 'Blank_Wall_Background', lighting: 'Flat_Digital_NoShadow', pov: 'Macro_Texture' } }));
+                }
+            }
+        };
+
+        enforceRules('A');
+        enforceRules('B');
+        enforceRules('C');
+    }, [slots.A.format, slots.B.format, slots.C.format]);
 
     const handleChange = (slotId: 'A' | 'B' | 'C', field: keyof MatrixSlot, value: string) => {
         setSlots(prev => ({
@@ -246,7 +285,9 @@ export const MatrixBuilder: React.FC<MatrixBuilderProps> = ({ onGenerate }) => {
                                         className="w-full bg-gray-900/80 border border-gray-700 rounded-md px-3 py-2 text-sm text-slate-200 focus:ring-1 focus:ring-white outline-none truncate"
                                     >
                                         {options.map(opt => (
-                                            <option key={opt} value={opt}>{opt.replace(/_/g, ' ')}</option>
+                                            <option key={opt} value={opt}>
+                                                {key === 'format' ? getFormatIcon(opt) : ''} {opt.replace(/_/g, ' ')}
+                                            </option>
                                         ))}
                                     </select>
                                 </div>
