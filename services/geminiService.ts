@@ -1,14 +1,8 @@
 
 import { GoogleGenAI, Modality, Type } from "@google/genai";
-import { CampaignBlueprint, MatrixSlot, Hypothesis, TargetPersona, BuyingTriggerObject, AdConcept, TextStyle } from '../types';
+import { CampaignBlueprint, MatrixSlot, Hypothesis, TargetPersona, BuyingTriggerObject, AdConcept, TextStyle, AspectRatio } from '../types';
 
 const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-
-export interface CampaignOptions {
-    personaVariations: TargetPersona[];
-    strategicAngles: string[];
-    buyingTriggers: BuyingTriggerObject[];
-}
 
 const imageB64ToGenerativePart = (base64Data: string, mimeType: string = 'image/jpeg') => {
   return {
@@ -203,25 +197,19 @@ export const generateHypothesisImage = async (
 ): Promise<string> => {
     
     const formatDirective = getFormatDirectives(slot.format, hook);
+    const aspectRatio = slot.aspectRatio || '9:16';
     
-    const textHeavyFormats = [
-        'Handwritten_Whiteboard', 
-        'Long_Text_Story', 
-        'Gmail_Letter_UX', 
-        'Billboard_Context', 
-        'Big_Font_Impact'
-    ];
-    const isTextFormat = textHeavyFormats.includes(slot.format);
-
-    // Localization Logic
+    // Dynamic Localization Logic
     const getContext = (country: string) => {
-        switch(country) {
-            case 'Indonesia': return "Context: Jakarta/Indonesia. Use local housing architecture, tropical lighting, motorcycle helmets in background, asian ethnicity subjects.";
-            case 'USA': return "Context: USA Suburbs. Wooden floors, american outlets, drywall backgrounds, big box stores, diverse ethnicity.";
-            case 'UK': return "Context: UK. Brick walls, cloudy weather, terraced housing interiors.";
-            case 'Brazil': return "Context: Brazil. Vibrant colors, tropical urban setting, local street style.";
-            default: return "Context: Global D2C. Relatable, non-descript home environments.";
-        }
+        const countryUpper = country.trim().toUpperCase();
+        if (countryUpper === 'INDONESIA') return "Context: Jakarta/Indonesia. Use local housing architecture, tropical lighting, motorcycle helmets in background, asian ethnicity subjects.";
+        if (countryUpper === 'USA') return "Context: USA Suburbs. Wooden floors, american outlets, drywall backgrounds, big box stores, diverse ethnicity.";
+        if (countryUpper === 'UK') return "Context: UK. Brick walls, cloudy weather, terraced housing interiors.";
+        if (countryUpper === 'BRAZIL') return "Context: Brazil. Vibrant colors, tropical urban setting, local street style.";
+        if (countryUpper === 'GLOBAL') return "Context: Global D2C. Relatable, non-descript home environments.";
+        
+        // FALLBACK FOR CUSTOM COUNTRIES: Ask AI to infer context
+        return `Context: ${country}. Use architecture, lighting, and cultural cues specific to ${country}. Ensure the environment looks authentically local to this region.`;
     };
 
     // STRONG Object Anchoring Logic & Interaction
@@ -245,6 +233,16 @@ export const generateHypothesisImage = async (
         `;
     }
 
+    // Aspect Ratio & Composition Instruction
+    let aspectRatioInstruction = `ASPECT RATIO: ${aspectRatio}`;
+    if (aspectRatio === '9:16') {
+        aspectRatioInstruction += ". Composition: VERTICAL Mobile Fullscreen. Ensure key elements are central, leaving negative space at TOP and BOTTOM for UI overlays.";
+    } else if (aspectRatio === '1:1') {
+        aspectRatioInstruction += ". Composition: SQUARE. Center the subject. Tighter framing.";
+    } else if (aspectRatio === '4:5') {
+        aspectRatioInstruction += ". Composition: VERTICAL PORTRAIT. Standard social feed crop.";
+    }
+
     // Lighting Sanity Check
     const lightingInstruction = slot.lighting === 'Harsh_Flash_ON' && (slot.setting === 'Overexposed_Sunlight' || slot.setting === 'Street_Pavement')
         ? "LIGHTING: Natural sunlight (override harsh flash as it conflicts with setting)"
@@ -263,6 +261,7 @@ export const generateHypothesisImage = async (
     - PERSONA POV: ${slot.pov.replace(/_/g, ' ')} (Camera angle)
     - ACTION: ${slot.action.replace(/_/g, ' ')} (Interaction with product)
     - TONE: ${slot.tone.replace(/_/g, ' ')}
+    - ${aspectRatioInstruction}
 
     THE "UGLY AD" PHILOSOPHY:
     - The photo must look AMATEUR, RAW, and AUTHENTIC. 

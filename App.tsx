@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { LandingPage } from './components/LandingPage';
 import { InputForm } from './components/InputForm';
 import { MatrixBuilder } from './components/MatrixBuilder';
@@ -27,6 +27,18 @@ function App() {
   
   const [hypotheses, setHypotheses] = useState<Hypothesis[]>([]);
   
+  // Safety: Prevent accidental close
+  useEffect(() => {
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+        if (hypotheses.length > 0) {
+            e.preventDefault();
+            e.returnValue = '';
+        }
+    };
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, [hypotheses]);
+
   // Interim Blueprint State for Validation Step
   const [blueprint, setBlueprint] = useState<CampaignBlueprint>({
       brandName: '',
@@ -46,7 +58,6 @@ function App() {
       setTargetCountry(country);
       setBrandName(brand);
       
-      // Update blueprint with initial data
       setBlueprint(prev => ({
           ...prev,
           brandName: brand,
@@ -61,20 +72,17 @@ function App() {
   const handleBlueprintValidated = (validatedBlueprint: CampaignBlueprint) => {
       setBlueprint(validatedBlueprint);
       setProductContext(validatedBlueprint.productAnalysis.name); 
-      // We validated the DNA, now we move to the Visual Matrix
       setCurrentStep('matrix');
   };
 
-  // UPDATE: Fix Data Wipe - Append new hypotheses instead of overwriting
   const handleMatrixExecution = async (slots: Record<'A' | 'B' | 'C', MatrixSlot>) => {
       setCurrentStep('reality');
       
-      // Generate unique batch ID to group these 3 slots together in Canvas
       const batchId = simpleUUID().substring(0, 4);
       
       const newHypotheses: Hypothesis[] = (['A', 'B', 'C'] as const).map(id => ({
           id: simpleUUID(),
-          slotId: `${batchId}_${id}`, // Unique Slot ID combining batch and slot letter
+          slotId: `${batchId}_${id}`,
           matrixConfig: slots[id],
           hook: goldenHook,
           visualPrompt: '',
@@ -84,10 +92,7 @@ function App() {
           overlay: { enabled: true, text: goldenHook, style: 'IG_Story', yPosition: 50 }
       }));
       
-      // Append to existing list
       setHypotheses(prev => [...prev, ...newHypotheses]);
-      
-      // Trigger generation for the new batch only
       newHypotheses.forEach(h => generateImageForHypothesis(h));
   };
 
@@ -95,7 +100,6 @@ function App() {
       try {
           setHypotheses(prev => prev.map(item => item.id === h.id ? { ...item, isGenerating: true, generationStatus: 'prompting', error: undefined } : item));
           
-          // Pass the persisted visual reference and country to the generation service
           const imageUrl = await generateHypothesisImage(
               h.matrixConfig, 
               productContext, 
@@ -130,7 +134,6 @@ function App() {
       setHypotheses(prev => prev.map(h => h.id === id ? { ...h, ...updates } : h));
   };
   
-  // UPDATE: Master Switch - Update global hook and optionally all overlays
   const handleAnchorUpdate = (newHook: string, updateOverlays: boolean) => {
       setGoldenHook(newHook);
       if (updateOverlays) {
@@ -147,8 +150,6 @@ function App() {
   const randomizeVisuals = (config: MatrixSlot): MatrixSlot => {
       const getRandom = (arr: string[]) => arr[Math.floor(Math.random() * arr.length)];
       
-      // We keep Format, Persona, and Action to maintain the core concept
-      // We randomize Setting, Lighting, and POV to create visual variety
       const settings: MatrixVar_Setting[] = ['Messy_Bedroom', 'Bathroom_Mirror_Dirty', 'Car_Dashboard_Traffic', 'Supermarket_Aisle', 'Street_Pavement', 'Kitchen_Table_Cluttered', 'Blank_Wall_Background'];
       const lightings: MatrixVar_Lighting[] = ['Harsh_Flash_ON', 'Bad_Fluorescent_Office', 'Dim_Bedroom_Lamp', 'Overexposed_Sunlight', 'Screen_Glow_Blue'];
       const povs: MatrixVar_POV[] = ['Selfie_Bad_Angle', 'First_Person_Shaky', 'Security_Cam_TopDown', 'Street_Level_Wide'];
@@ -163,27 +164,26 @@ function App() {
 
   const handleRemix = async (mode: RemixMode, parent: Hypothesis) => {
       if (mode === 'scale_vibe') {
-          // Generate 3 new hooks
           const newHooks = await generateHookVariations(parent.hook, productContext);
           
           const newHypotheses: Hypothesis[] = newHooks.map((hook, i) => ({
               id: simpleUUID(),
               slotId: `${parent.slotId}_vibe_${i+1}`,
-              matrixConfig: { ...parent.matrixConfig }, // Keep visuals identical
+              matrixConfig: { ...parent.matrixConfig },
               hook: hook,
               visualPrompt: '',
               isGenerating: true,
               generationStatus: 'idle',
               parentId: parent.id,
               brandName: brandName,
-              overlay: { ...parent.overlay!, text: hook } // Update overlay text
+              overlay: { ...parent.overlay!, text: hook }
           }));
           
           setHypotheses(prev => [...prev, ...newHypotheses]);
           newHypotheses.forEach(h => generateImageForHypothesis(h));
 
       } else if (mode === 'scale_visual') {
-          // Keep hook, RANDOMIZE visual variables (Smart Remix)
+          // Smart Remix: Actually randomize visuals
           const newHypotheses: Hypothesis[] = [1, 2, 3].map((i) => {
              const newConfig = randomizeVisuals(parent.matrixConfig);
              return {
@@ -214,7 +214,7 @@ function App() {
                 goldenHook={goldenHook}
                 onRegenerate={(id) => { const h = hypotheses.find(i => i.id === id); if(h) generateImageForHypothesis(h); }}
                 onRoast={handleRoast}
-                onDuplicate={(h) => handleRemix('scale_visual', h)} // Shortcut duplicate to visual remix
+                onDuplicate={(h) => handleRemix('scale_visual', h)}
                 onRemix={handleRemix}
                 onUpdateHypothesis={handleUpdateHypothesis}
                 onDelete={(id) => setHypotheses(prev => prev.filter(h => h.id !== id))}

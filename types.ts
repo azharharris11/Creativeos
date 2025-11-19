@@ -74,8 +74,10 @@ export type MatrixVar_POV = 'Selfie_Bad_Angle' | 'First_Person_Shaky' | 'Screen_
 export type MatrixVar_Action = 'Showing_Problem_CloseUp' | 'Unboxing_Messy' | 'Pointing_Finger' | 'Holding_Product_Awkwardly' | 'Just_Text_No_Action';
 export type MatrixVar_Tone = 'Brutally_Honest' | 'Urgent_Warning' | 'Confused_Skeptical' | 'Manic_Energy' | 'Deadpan_Humor';
 
+export type AspectRatio = '9:16' | '1:1' | '4:5';
+
 export interface MatrixSlot {
-  id: 'A' | 'B' | 'C' | string; // Allow string for dynamic slots in God Mode
+  id: 'A' | 'B' | 'C' | string; 
   format: MatrixVar_Format | string;
   setting: MatrixVar_Setting | string;
   lighting: MatrixVar_Lighting | string;
@@ -83,12 +85,13 @@ export interface MatrixSlot {
   pov: MatrixVar_POV | string;
   action: MatrixVar_Action | string;
   tone: MatrixVar_Tone | string;
+  aspectRatio?: AspectRatio; // NEW: Ratio control
 }
 
 export const MATRIX_DEFAULTS: Record<'A' | 'B' | 'C', MatrixSlot> = {
-  A: { id: 'A', format: 'Ugly_Problem_Visual', setting: 'Messy_Bedroom', lighting: 'Harsh_Flash_ON', persona: 'Gen_Z_Real', pov: 'Selfie_Bad_Angle', action: 'Showing_Problem_CloseUp', tone: 'Brutally_Honest' },
-  B: { id: 'B', format: 'Long_Text_Story', setting: 'Blank_Wall_Background', lighting: 'Screen_Glow_Blue', persona: 'Anonymous_Poster', pov: 'Screen_Screenshot', action: 'Just_Text_No_Action', tone: 'Urgent_Warning' },
-  C: { id: 'C', format: 'Billboard_Context', setting: 'Street_Pavement', lighting: 'Overexposed_Sunlight', persona: 'Blue_Collar_Worker', pov: 'Street_Level_Wide', action: 'Holding_Product_Awkwardly', tone: 'Deadpan_Humor' }
+  A: { id: 'A', format: 'Ugly_Problem_Visual', setting: 'Messy_Bedroom', lighting: 'Harsh_Flash_ON', persona: 'Gen_Z_Real', pov: 'Selfie_Bad_Angle', action: 'Showing_Problem_CloseUp', tone: 'Brutally_Honest', aspectRatio: '9:16' },
+  B: { id: 'B', format: 'Long_Text_Story', setting: 'Blank_Wall_Background', lighting: 'Screen_Glow_Blue', persona: 'Anonymous_Poster', pov: 'Screen_Screenshot', action: 'Just_Text_No_Action', tone: 'Urgent_Warning', aspectRatio: '9:16' },
+  C: { id: 'C', format: 'Billboard_Context', setting: 'Street_Pavement', lighting: 'Overexposed_Sunlight', persona: 'Blue_Collar_Worker', pov: 'Street_Level_Wide', action: 'Holding_Product_Awkwardly', tone: 'Deadpan_Humor', aspectRatio: '9:16' }
 };
 
 // --- OVERLAY & REMIX TYPES ---

@@ -13,8 +13,9 @@ type InputMode = 'manual' | 'image_scan' | 'text_scan';
 export const InputForm: React.FC<InputFormProps> = ({ onConfirmAnchor }) => {
   const [productInfo, setProductInfo] = useState('');
   const [goldenHook, setGoldenHook] = useState('');
-  const [brandName, setBrandName] = useState(''); // NEW
-  const [targetCountry, setTargetCountry] = useState<TargetCountry>('Global');
+  const [brandName, setBrandName] = useState(''); 
+  const [targetCountry, setTargetCountry] = useState<string>('Global');
+  const [isCustomCountry, setIsCustomCountry] = useState(false);
   const [visualReference, setVisualReference] = useState<string | undefined>(undefined);
   
   const [isLocked, setIsLocked] = useState(false);
@@ -195,18 +196,40 @@ export const InputForm: React.FC<InputFormProps> = ({ onConfirmAnchor }) => {
                             <label className="block text-xs font-bold text-gray-400 uppercase mb-2 flex items-center gap-1">
                                 <GlobeIcon className="w-3 h-3" /> Target Country
                             </label>
-                            <select 
-                                disabled={isLocked}
-                                value={targetCountry}
-                                onChange={e => setTargetCountry(e.target.value as TargetCountry)}
-                                className={`w-full bg-gray-950 border ${isLocked ? 'border-green-900 text-gray-400' : 'border-gray-700 text-white'} rounded-lg p-3 focus:ring-2 focus:ring-cyan-500 outline-none text-sm`}
-                            >
-                                <option value="Global">Global / Generic</option>
-                                <option value="Indonesia">Indonesia</option>
-                                <option value="USA">USA</option>
-                                <option value="UK">UK</option>
-                                <option value="Brazil">Brazil</option>
-                            </select>
+                            {isCustomCountry ? (
+                                <div className="flex gap-2">
+                                    <input 
+                                        disabled={isLocked}
+                                        value={targetCountry}
+                                        onChange={e => setTargetCountry(e.target.value)}
+                                        className={`w-full bg-gray-950 border ${isLocked ? 'border-green-900 text-gray-400' : 'border-gray-700 text-white'} rounded-lg p-3 focus:ring-2 focus:ring-cyan-500 outline-none text-sm`}
+                                        placeholder="Type Country..."
+                                        autoFocus
+                                    />
+                                    <button type="button" onClick={() => setIsCustomCountry(false)} className="text-xs underline text-gray-500">Cancel</button>
+                                </div>
+                            ) : (
+                                <select 
+                                    disabled={isLocked}
+                                    value={targetCountry}
+                                    onChange={e => {
+                                        if(e.target.value === 'custom') {
+                                            setTargetCountry('');
+                                            setIsCustomCountry(true);
+                                        } else {
+                                            setTargetCountry(e.target.value);
+                                        }
+                                    }}
+                                    className={`w-full bg-gray-950 border ${isLocked ? 'border-green-900 text-gray-400' : 'border-gray-700 text-white'} rounded-lg p-3 focus:ring-2 focus:ring-cyan-500 outline-none text-sm`}
+                                >
+                                    <option value="Global">Global / Generic</option>
+                                    <option value="Indonesia">Indonesia</option>
+                                    <option value="USA">USA</option>
+                                    <option value="UK">UK</option>
+                                    <option value="Brazil">Brazil</option>
+                                    <option value="custom">✨ Custom Location...</option>
+                                </select>
+                            )}
                         </div>
                     </div>
 

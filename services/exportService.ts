@@ -147,7 +147,11 @@ export const exportHypothesesToZip = async (hypotheses: Hypothesis[], campaignNa
         const blob = await compositeHypothesisImage(h);
         if (blob) {
             // CREATE FOLDER STRUCTURE: Persona / Format / Image
-            const folderName = `${h.matrixConfig.persona}/${h.matrixConfig.format}`;
+            // Clean filenames
+            const safePersona = h.matrixConfig.persona.replace(/[^a-z0-9]/gi, '_');
+            const safeFormat = h.matrixConfig.format.replace(/[^a-z0-9]/gi, '_');
+            
+            const folderName = `${safePersona}/${safeFormat}`;
             const filename = `${campaignName}_${h.slotId}.jpg`;
             
             // Add to zip in folder
@@ -205,9 +209,6 @@ export const compositeTextOnImage = async (imageUrl: string,
             if (!ctx) { reject("No context"); return; }
             
             ctx.drawImage(img, 0, 0);
-            
-            // TODO: Add support for AdConcept overlays later if needed
-            
             resolve(canvas.toDataURL('image/jpeg', 0.95));
         };
         img.onerror = reject;

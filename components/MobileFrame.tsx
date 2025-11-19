@@ -15,15 +15,20 @@ interface MobileFrameProps {
     scale?: number;
 }
 
-const COLORS = ['#FFFFFF', '#000000', '#FF0000', '#FFFF00', '#00FF00', '#00FFFF', '#FF00FF', '#1F2937'];
-const BG_COLORS = ['transparent', '#FFFFFF', '#000000', '#1F2937', '#DC2626', '#2563EB', '#16A34A'];
 const FONTS = ['Classic', 'Modern', 'Neon', 'Typewriter', 'Meme'];
 
 export const MobileFrame: React.FC<MobileFrameProps> = ({ hypothesis, onRegenerate, onRoast, onDelete, onRemix, onUpdateOverlay, scale = 1 }) => {
     const [isEditingOverlay, setIsEditingOverlay] = useState(false);
     const [isExporting, setIsExporting] = useState(false);
     
-    // Initialize config with defaults if missing
+    // Dynamic Aspect Ratio Calculations
+    const ratio = hypothesis.matrixConfig.aspectRatio || '9:16';
+    const baseWidth = 300;
+    let frameHeight = 533; // 9:16 default
+    if (ratio === '1:1') frameHeight = 300;
+    if (ratio === '4:5') frameHeight = 375;
+
+    // Initialize config with defaults
     const [overlayConfig, setOverlayConfig] = useState<OverlayConfig>(() => ({
         enabled: true,
         text: hypothesis.hook || '',
@@ -42,17 +47,10 @@ export const MobileFrame: React.FC<MobileFrameProps> = ({ hypothesis, onRegenera
 
     useEffect(() => {
         if (!isEditingOverlay) {
-             // Sync from prop if not editing locally
              setOverlayConfig(prev => ({
                  ...prev,
                  ...hypothesis.overlay,
-                 // Ensure defaults exist
-                 color: hypothesis.overlay?.color || prev.color || '#FFFFFF',
-                 backgroundColor: hypothesis.overlay?.backgroundColor || prev.backgroundColor || 'transparent',
-                 fontSize: hypothesis.overlay?.fontSize || prev.fontSize || 40,
-                 fontFamily: hypothesis.overlay?.fontFamily || prev.fontFamily || 'Classic',
-                 textAlign: hypothesis.overlay?.textAlign || prev.textAlign || 'center',
-                 text: hypothesis.hook // Ensure hook sync
+                 text: hypothesis.hook // Keep text synced with golden hook unless manually edited
              }));
         }
     }, [hypothesis.overlay, hypothesis.hook, isEditingOverlay]);
@@ -72,21 +70,29 @@ export const MobileFrame: React.FC<MobileFrameProps> = ({ hypothesis, onRegenera
         setIsExporting(false);
     };
 
-    const getPersonaHashTags = (persona: string) => {
-        if (persona.includes('Parent')) return '#momlife #parenthood';
-        if (persona.includes('Gen_Z')) return '#fyp #trending';
-        if (persona.includes('Worker')) return '#worklife #hustle';
-        return '#lifehack #fyp';
-    }
+    // --- DYNAMIC UI LOGIC ---
+    
+    // Generate dynamic hashtags/captions based on Persona
+    const getPersonaContext = (persona: string) => {
+        switch(persona) {
+            case 'Stressed_Parent': return { tags: '#momlife #parenthood #tired', caption: 'Every. Single. Day. 🫠' };
+            case 'Gen_Z_Real': return { tags: '#fyp #trending #pov', caption: 'Wait for the end 💀' };
+            case 'Blue_Collar_Worker': return { tags: '#worklife #grind #hustle', caption: 'Finally found something that works.' };
+            case 'Skeptical_User': return { tags: '#review #honest #truth', caption: 'I thought this was a scam...' };
+            case 'Anonymous_Poster': return { tags: '#confession #secret', caption: 'Dont tell anyone I posted this.' };
+            default: return { tags: '#lifehack #fyp', caption: 'Game changer.' };
+        }
+    };
 
-    // Render text based on config
+    const personaContext = getPersonaContext(hypothesis.matrixConfig.persona);
+    const randomLikes = (Math.random() * (500 - 10) + 10).toFixed(1);
+
     const renderOverlayText = () => {
         if (!overlayConfig.enabled) return null;
         
         const topPos = `${overlayConfig.yPosition}%`;
         const textAlignClass = overlayConfig.textAlign === 'left' ? 'text-left' : overlayConfig.textAlign === 'right' ? 'text-right' : 'text-center';
         
-        // Map font family to CSS class or style
         const fontMap: Record<string, string> = {
             'Classic': 'font-sans',
             'Modern': 'font-[Montserrat]',
@@ -95,23 +101,16 @@ export const MobileFrame: React.FC<MobileFrameProps> = ({ hypothesis, onRegenera
             'Meme': 'font-[Impact]'
         };
         const fontClass = fontMap[overlayConfig.fontFamily || 'Classic'] || 'font-sans';
-        
-        // Calculate size roughly based on container width (300px)
-        const fontSizePx = (300 * ((overlayConfig.fontSize || 40) / 100)) * 0.15; 
+        const fontSizePx = (baseWidth * ((overlayConfig.fontSize || 40) / 100)) * 0.15; 
 
-        const commonStyle: React.CSSProperties = {
-            color: overlayConfig.color,
-            fontSize: `${Math.max(10, fontSizePx)}px`,
-            lineHeight: 1.2
-        };
-
-        // Wrapper to handle positioning
         return (
             <div className={`absolute left-0 w-full px-4 pointer-events-none z-20 flex flex-col ${overlayConfig.textAlign === 'left' ? 'items-start' : overlayConfig.textAlign === 'right' ? 'items-end' : 'items-center'}`} style={{ top: topPos, transform: 'translateY(-50%)' }}>
                 <span 
                     className={`inline-block rounded px-2 py-1 whitespace-pre-wrap ${fontClass} ${textAlignClass}`}
                     style={{
-                        ...commonStyle,
+                        color: overlayConfig.color,
+                        fontSize: `${Math.max(10, fontSizePx)}px`,
+                        lineHeight: 1.2,
                         backgroundColor: overlayConfig.backgroundColor,
                         textShadow: overlayConfig.style === 'TikTok_Modern' || overlayConfig.style === 'Meme_Impact' ? '1px 1px 0 #000' : 'none',
                         WebkitTextStroke: overlayConfig.style === 'Meme_Impact' ? '0.5px black' : 'none'
@@ -125,24 +124,22 @@ export const MobileFrame: React.FC<MobileFrameProps> = ({ hypothesis, onRegenera
 
     if (isLowDetail) {
         return (
-            <div className="w-[300px] h-[533px] bg-black rounded-[3rem] border-8 border-gray-800 overflow-hidden flex items-center justify-center shadow-2xl">
-                {hypothesis.imageUrl ? (
-                     <img src={hypothesis.imageUrl} alt="Ad" className="w-full h-full object-cover opacity-80" />
-                ) : (
-                     <div className="w-full h-full bg-gray-900" />
-                )}
+            <div style={{ width: baseWidth, height: frameHeight }} className="bg-black rounded-[2rem] border-8 border-gray-800 overflow-hidden flex items-center justify-center shadow-2xl transition-all">
+                {hypothesis.imageUrl ? <img src={hypothesis.imageUrl} className="w-full h-full object-cover opacity-80" /> : <div className="w-full h-full bg-gray-900" />}
             </div>
         );
     }
 
     return (
         <div className="flex flex-col items-center gap-4 z-10">
-            {/* Phone Frame */}
-            <div className={`relative w-[300px] h-[533px] bg-black rounded-[3rem] border-8 overflow-hidden shadow-2xl transition-all duration-500 ${hypothesis.aiRoast && hypothesis.aiRoast.thumbstopScore > 80 ? 'border-green-500 shadow-[0_0_30px_rgba(34,197,94,0.4)]' : 'border-gray-800'}`}>
-                
-                <div className="absolute top-0 left-1/2 -translate-x-1/2 w-24 h-6 bg-black rounded-b-xl z-30"></div>
+            {/* Frame Container */}
+            <div 
+                style={{ width: baseWidth, height: frameHeight }}
+                className={`relative bg-black rounded-[2rem] border-8 overflow-hidden shadow-2xl transition-all duration-500 ${hypothesis.aiRoast && hypothesis.aiRoast.thumbstopScore > 80 ? 'border-green-500 shadow-[0_0_30px_rgba(34,197,94,0.4)]' : 'border-gray-800'}`}
+            >
+                {ratio === '9:16' && <div className="absolute top-0 left-1/2 -translate-x-1/2 w-24 h-6 bg-black rounded-b-xl z-30"></div>}
 
-                <div className="w-full h-full relative bg-gray-900">
+                <div className="w-full h-full relative bg-gray-900 group">
                     {hypothesis.isGenerating ? (
                         <div className="w-full h-full flex flex-col items-center justify-center text-green-500 font-mono p-4 text-center animate-pulse">
                             <SparklesIcon className="w-8 h-8 mb-4" />
@@ -157,20 +154,37 @@ export const MobileFrame: React.FC<MobileFrameProps> = ({ hypothesis, onRegenera
                     
                     {hypothesis.imageUrl && renderOverlayText()}
 
-                    {/* Fake UI */}
+                    {/* DYNAMIC FAKE UI LAYER */}
                     <div className="absolute inset-0 pointer-events-none z-10 flex flex-col justify-between p-4">
+                        {/* Top Bar */}
                         <div className="flex justify-between items-center pt-2 text-white drop-shadow-md opacity-70">
-                            <div className="text-[10px] font-bold">{hypothesis.brandName || 'Brand'}</div>
+                             {/* Brand Name Injection */}
+                            <div className="text-[10px] font-bold">{hypothesis.brandName || 'YourBrand'}</div>
                             <div className="text-[8px] bg-gray-500/50 px-1 rounded">Sponsored</div>
                         </div>
+
+                        {/* Bottom Content */}
                         <div className="text-white drop-shadow-lg pb-8 opacity-90">
-                            <div className="font-bold text-xs mb-1">@{hypothesis.matrixConfig.persona}</div>
-                            <div className="text-xs mb-2 opacity-80">Check out this product... {getPersonaHashTags(hypothesis.matrixConfig.persona)}</div>
-                            <div className="w-full py-2 text-center font-bold text-[10px] rounded bg-blue-600 text-white">Shop Now</div>
+                            <div className="font-bold text-xs mb-1">@{hypothesis.matrixConfig.persona.toLowerCase().replace(/_/g, '.')}</div>
+                            <div className="text-xs mb-2 opacity-80 leading-tight">
+                                {personaContext.caption} {personaContext.tags}
+                            </div>
+                            {/* Fake CTA Button */}
+                            <div className="w-full py-2 text-center font-bold text-[10px] rounded bg-blue-600 text-white animate-pulse">
+                                Shop Now &gt;
+                            </div>
                         </div>
+
+                        {/* Side Action Bar */}
                         <div className="absolute right-2 bottom-20 flex flex-col gap-4 items-center text-white opacity-90">
-                             <HeartIcon className="w-6 h-6" />
-                             <div className="text-[10px] font-bold">{(Math.random() * (100 - 1) + 1).toFixed(1)}K</div>
+                             <div className="flex flex-col items-center">
+                                 <HeartIcon className="w-6 h-6" />
+                                 <span className="text-[10px] font-bold">{randomLikes}K</span>
+                             </div>
+                             <div className="flex flex-col items-center">
+                                <div className="w-6 h-6 bg-gray-200/20 rounded-full flex items-center justify-center">💬</div>
+                                <span className="text-[10px] font-bold">Share</span>
+                             </div>
                         </div>
                     </div>
                 </div>
@@ -185,7 +199,7 @@ export const MobileFrame: React.FC<MobileFrameProps> = ({ hypothesis, onRegenera
                 )}
 
                 <div className="flex justify-between items-center pb-2 border-b border-gray-800">
-                    <span className="text-[10px] text-gray-500 font-mono uppercase tracking-widest">Slot {hypothesis.slotId}</span>
+                    <span className="text-[10px] text-gray-500 font-mono uppercase tracking-widest">Slot {hypothesis.slotId} ({ratio})</span>
                     <div className="flex gap-1">
                          <button onClick={() => setIsEditingOverlay(!isEditingOverlay)} className={`p-1.5 rounded ${isEditingOverlay ? 'bg-indigo-600 text-white' : 'bg-gray-800 text-gray-400 hover:text-white'}`} title="Edit Overlay">
                             <TypeIcon className="w-4 h-4" />
@@ -208,10 +222,7 @@ export const MobileFrame: React.FC<MobileFrameProps> = ({ hypothesis, onRegenera
                             className="w-full bg-gray-950 border border-gray-700 rounded p-2 text-xs text-white focus:ring-1 focus:ring-indigo-500 outline-none resize-none"
                             placeholder="Text..."
                         />
-                        
-                        {/* Typography Tools */}
                         <div className="grid grid-cols-2 gap-2">
-                             {/* Font Family */}
                              <select 
                                 value={overlayConfig.fontFamily} 
                                 onChange={(e) => handleOverlayChange({ fontFamily: e.target.value })}
@@ -219,16 +230,12 @@ export const MobileFrame: React.FC<MobileFrameProps> = ({ hypothesis, onRegenera
                              >
                                 {FONTS.map(f => <option key={f} value={f}>{f}</option>)}
                              </select>
-
-                             {/* Alignment */}
                              <div className="flex bg-gray-800 rounded border border-gray-700 overflow-hidden">
                                 <button onClick={() => handleOverlayChange({ textAlign: 'left' })} className={`flex-1 flex justify-center items-center ${overlayConfig.textAlign === 'left' ? 'bg-gray-700 text-white' : 'text-gray-500'}`}><AlignLeftIcon className="w-3 h-3"/></button>
                                 <button onClick={() => handleOverlayChange({ textAlign: 'center' })} className={`flex-1 flex justify-center items-center ${overlayConfig.textAlign === 'center' ? 'bg-gray-700 text-white' : 'text-gray-500'}`}><AlignCenterIcon className="w-3 h-3"/></button>
                                 <button onClick={() => handleOverlayChange({ textAlign: 'right' })} className={`flex-1 flex justify-center items-center ${overlayConfig.textAlign === 'right' ? 'bg-gray-700 text-white' : 'text-gray-500'}`}><AlignRightIcon className="w-3 h-3"/></button>
                              </div>
                         </div>
-
-                        {/* Size & Position Sliders */}
                         <div className="space-y-1">
                             <div className="flex items-center gap-2">
                                 <TypeIcon className="w-3 h-3 text-gray-500" />
@@ -239,39 +246,6 @@ export const MobileFrame: React.FC<MobileFrameProps> = ({ hypothesis, onRegenera
                                 <input type="range" min="10" max="90" value={overlayConfig.yPosition} onChange={(e) => handleOverlayChange({ yPosition: parseInt(e.target.value) })} className="w-full h-1 bg-gray-700 rounded-lg appearance-none cursor-pointer"/>
                             </div>
                         </div>
-
-                        {/* Colors */}
-                        <div className="space-y-1">
-                            <div className="flex items-center gap-1 mb-1 text-[10px] text-gray-500 uppercase font-bold"><PaletteIcon className="w-3 h-3"/> Text</div>
-                            <div className="flex gap-1 overflow-x-auto pb-1 no-scrollbar">
-                                {COLORS.map(c => (
-                                    <button 
-                                        key={c} 
-                                        onClick={() => handleOverlayChange({ color: c })} 
-                                        className={`w-5 h-5 rounded-full border ${overlayConfig.color === c ? 'border-white scale-110' : 'border-gray-700'}`} 
-                                        style={{ backgroundColor: c }}
-                                    />
-                                ))}
-                            </div>
-                        </div>
-                        <div className="space-y-1">
-                             <div className="flex items-center gap-1 mb-1 text-[10px] text-gray-500 uppercase font-bold"><PaletteIcon className="w-3 h-3"/> Background</div>
-                            <div className="flex gap-1 overflow-x-auto pb-1 no-scrollbar">
-                                {BG_COLORS.map(c => (
-                                    <button 
-                                        key={c} 
-                                        onClick={() => handleOverlayChange({ backgroundColor: c })} 
-                                        className={`w-5 h-5 rounded-full border ${overlayConfig.backgroundColor === c ? 'border-white scale-110' : 'border-gray-700'}`} 
-                                        style={{ 
-                                            backgroundColor: c === 'transparent' ? 'transparent' : c,
-                                            backgroundImage: c === 'transparent' ? 'linear-gradient(45deg, #ccc 25%, transparent 25%), linear-gradient(-45deg, #ccc 25%, transparent 25%), linear-gradient(45deg, transparent 75%, #ccc 75%), linear-gradient(-45deg, transparent 75%, #ccc 75%)' : 'none',
-                                            backgroundSize: '4px 4px'
-                                        }}
-                                    />
-                                ))}
-                            </div>
-                        </div>
-
                         <div className="flex items-center gap-2 text-xs text-gray-500 pt-2 border-t border-gray-800">
                             <input type="checkbox" checked={overlayConfig.enabled} onChange={(e) => handleOverlayChange({ enabled: e.target.checked })} />
                             <span>Show Overlay</span>
