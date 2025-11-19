@@ -1,4 +1,5 @@
 
+
 import React, { useRef, useEffect, useState, useMemo } from 'react';
 import { Hypothesis, MatrixSlot, OverlayConfig, RemixMode } from '../types';
 import { ZoomInIcon, ZoomOutIcon, LocateIcon, CopyIcon, ShieldAlertIcon, EditIcon } from './icons';
@@ -34,7 +35,7 @@ export const MindMapCanvas: React.FC<MindMapCanvasProps> = ({
     const [view, setView] = useState({ x: 0, y: 0, k: 0.4 }); // Start zoomed out to see clusters
     const [remixTarget, setRemixTarget] = useState<Hypothesis | null>(null);
     const isDragging = useRef(false);
-    const lastPos = useRef({ x: 0, y: 0 });
+    const lastPos = useRef<{ x: number; y: number }>({ x: 0, y: 0 });
     
     // Anchor Editing State
     const [isEditingAnchor, setIsEditingAnchor] = useState(false);
@@ -90,29 +91,17 @@ export const MindMapCanvas: React.FC<MindMapCanvasProps> = ({
         return results;
     }, [hypotheses]);
 
-    // Similarity Radar Logic
-    const similarityLines = useMemo(() => {
-        const lines = [];
-        for (let i = 0; i < positionedHypotheses.length; i++) {
-            for (let j = i + 1; j < positionedHypotheses.length; j++) {
-                const h1 = positionedHypotheses[i];
-                const h2 = positionedHypotheses[j];
-                
-                // Optimization: Don't check distant nodes (different clusters likely far apart)
-                const dist = Math.sqrt(Math.pow(h1.x - h2.x, 2) + Math.pow(h1.y - h2.y, 2));
-                if (dist > 1000) continue;
+    // Lineage Lines (Parent -> Child)
+    const lineageLines = useMemo(() => {
+        const lines: { x1: number, y1: number, x2: number, y2: number }[] = [];
+        const posMap = new Map(positionedHypotheses.map(h => [h.id, h]));
 
-                let score = 0;
-                const keys = Object.keys(h1.matrixConfig) as (keyof MatrixSlot)[];
-                keys.forEach(k => { 
-                    if (k !== 'id' && h1.matrixConfig[k] === h2.matrixConfig[k]) score++; 
-                });
-
-                if (score >= 5) { 
-                    lines.push({ x1: h1.x, y1: h1.y, x2: h2.x, y2: h2.y, score });
-                }
+        positionedHypotheses.forEach(h => {
+            if (h.parentId && posMap.has(h.parentId)) {
+                const parent = posMap.get(h.parentId)!;
+                lines.push({ x1: parent.x, y1: parent.y, x2: h.x, y2: h.y });
             }
-        }
+        });
         return lines;
     }, [positionedHypotheses]);
 
@@ -178,18 +167,18 @@ export const MindMapCanvas: React.FC<MindMapCanvasProps> = ({
                             <line key={`line-${h.id}`} x1={0} y1={0} x2={h.x} y2={h.y} stroke="#334155" strokeWidth="2" opacity="0.5" />
                         ))}
                         
-                        {/* Similarity Radar Lines */}
-                        {similarityLines.map((line, idx) => (
+                        {/* Lineage Lines (Parent -> Child) */}
+                        {lineageLines.map((line, idx) => (
                             <line 
-                                key={`sim-${idx}`} 
+                                key={`lin-${idx}`} 
                                 x1={line.x1} 
                                 y1={line.y1} 
                                 x2={line.x2} 
                                 y2={line.y2} 
-                                stroke="#ef4444" 
-                                strokeWidth="6" 
-                                strokeDasharray="15,15"
-                                className="animate-pulse"
+                                stroke="#22d3ee" 
+                                strokeWidth="4" 
+                                strokeDasharray="5,5"
+                                className="opacity-60"
                             />
                         ))}
                     </g>

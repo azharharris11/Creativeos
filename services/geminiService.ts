@@ -27,7 +27,7 @@ export const extractAnchorFromImage = async (base64Data: string): Promise<{ prod
     Analyze this advertisement image as a Direct Response Marketing Expert.
     
     Extract two critical pieces of information:
-    1. "productInfo": What is the product? Who is the specific target audience? What is the key benefit? (Summarize in 2 sentences).
+    1. "productInfo": Describe the PHYSICAL PRODUCT in detail. (e.g., "A small pink square bottle with a black dropper", "A white tube with red text"). Also mention the category (Skincare, Tech, Food).
     2. "goldenHook": What is the MAIN Offer, Promise, or Hook text visible in the image? (e.g. "50% Off", "Money Back Guarantee", "Kill Acne in 3 Days"). Keep it short and punchy.
 
     Return JSON only.
@@ -64,7 +64,7 @@ export const extractAnchorFromText = async (textInput: string): Promise<{ produc
     "${textInput.substring(0, 2000)}"
     
     Extract two critical pieces of information:
-    1. "productInfo": What is the product? Who is the target audience? (Summarize in 2 sentences).
+    1. "productInfo": What is the product? Describe its likely physical appearance based on the text. Who is the target audience? (Summarize in 2 sentences).
     2. "goldenHook": What is the strongest Hook or Offer found in the text? (e.g. "Garansi Uang Kembali", "Beli 1 Gratis 1"). Keep it under 10 words.
 
     Return JSON only.
@@ -93,9 +93,10 @@ export const extractAnchorFromText = async (textInput: string): Promise<{ produc
     }
 };
 
-// --- THE UGLIFIER ENGINE 3.0 ---
-// Implements the "Ugly Ads Formula" based on the 13 Proven Formats.
-const getFormatDirectives = (format: string) => {
+// --- THE UGLIFIER ENGINE 3.1 (Text-Aware) ---
+// Updated to conditionally allow text for formats that require it (Notes, Whiteboard, etc.)
+
+const getFormatDirectives = (format: string, hookText: string) => {
     switch (format) {
         case 'Ugly_Problem_Visual':
             return `
@@ -103,133 +104,203 @@ const getFormatDirectives = (format: string) => {
             CONTENT: Show the messy, ugly truth of the problem (e.g., messy room, acne skin, dirty floor).
             VIBE: "I struggle with this too". Authentic and relatable.
             QUALITY: Low fidelity, amateur shot, bad angle.
+            TEXT INSTRUCTION: DO NOT RENDER TEXT. The image should be pure visual context.
             `;
         case 'Billboard_Context':
             return `
-            STYLE: A photo of a blank roadside billboard, street sign, or shop sign.
+            STYLE: A photo of a roadside billboard or shop sign.
             POV: Shot from a moving car window or street level (low angle).
-            ENVIRONMENT: Gritty urban street, cloudy sky, power lines visible. Familiarity bias.
-            CANVAS: The billboard surface must be PLAIN WHITE or SOLID COLOR (ready for text overlay).
+            ENVIRONMENT: Gritty urban street, cloudy sky, power lines visible.
+            TEXT INSTRUCTION: RENDER TEXT. Write the following text clearly on the billboard: "${hookText}".
+            The text should look printed on the sign, slightly weathered.
             `;
         case 'MS_Paint_Nostalgia':
             return `
             STYLE: "Graphic design is my passion" meme aesthetic. Windows 95 vibe.
             ELEMENTS: Clashing colors (Red/Yellow/Blue), pixelated edges, jagged cutout of the product.
-            COMPOSITION: Intentionally bad design. Plain white background with a chaotic element.
-            VIBE: Nostalgic, anti-design, impossible to ignore.
+            COMPOSITION: Intentionally bad design.
+            TEXT INSTRUCTION: RENDER TEXT. Include the text "${hookText}" using Comic Sans or Times New Roman pixelated font in a bright color box.
             `;
         case 'Instagram_Story_UX':
-        case 'Fake_Platform_UI':
             return `
             STYLE: Mimics a raw photo taken natively inside the Instagram Story camera.
-            CONTENT: A simple background (desk, floor, wall) that looks like a user's organic content.
+            CONTENT: A simple background (desk, floor, wall).
             VIBE: Native trust. "This is a friend's update".
+            TEXT INSTRUCTION: DO NOT RENDER TEXT. Leave space for UI overlay.
             `;
         case 'Gmail_Letter_UX':
             return `
             STYLE: Minimalist digital screenshot.
-            CONTENT: A blank white email body background. Resembles a Gmail read view.
+            CONTENT: A simple white email body background. Resembles a Gmail read view.
             VIBE: Intimate, "We need to apologize", "Personal Update".
-            IMPORTANT: Just the background container for text.
+            TEXT INSTRUCTION: RENDER TEXT. Show the subject line or body text as: "${hookText}". Use standard sans-serif email font.
             `;
         case 'Long_Text_Story':
             return `
-            STYLE: Screenshot of the Apple Notes app (yellow lines) or Notion page (stark white).
-            CONTENT: Just the blank writing surface.
+            STYLE: Screenshot of the Apple Notes app (yellow lines) or Notion page.
+            CONTENT: A digital note interface.
             VIBE: "I'm just jotting down thoughts". Intimate, diary-like.
-            IMPORTANT: NO TEXT RENDERED. Just the blank writing surface.
+            TEXT INSTRUCTION: RENDER TEXT. Write the following text on the note lines: "${hookText}". Make it look typed on a phone.
             `;
         case 'Reddit_Thread_UX':
             return `
-            STYLE: Minimalist forum style background.
-            CONTENT: Resembles a dark mode or light mode text thread background.
-            VIBE: Community-driven, "Is this a scam?", Skeptical discussion.
+            STYLE: Screenshot of a Reddit text post (Dark mode or Light mode).
+            CONTENT: Thread title and body.
+            VIBE: Community-driven, Skeptical discussion.
+            TEXT INSTRUCTION: RENDER TEXT. The thread title must say: "${hookText}".
             `;
         case 'Handwritten_Whiteboard':
             return `
             STYLE: A photo of a slightly dirty whiteboard in a home office.
-            CONTENT: Blank space on the whiteboard for text.
             LIGHTING: Glare from a window, amateur lighting.
             VIBE: Educational, "Let me explain this", "Quick math".
+            TEXT INSTRUCTION: RENDER TEXT. Write the following text on the whiteboard using a black marker: "${hookText}". The handwriting should be messy but legible.
             `;
         case 'Big_Font_Impact':
             return `
             STYLE: A solid, high-contrast background color (e.g., Warning Yellow, Alert Red, or Stark Black).
-            CONTENT: Minimal distraction. The focus is purely on creating a canvas for HUGE text.
+            CONTENT: Minimal distraction.
             VIBE: Warning sign, Pattern Interrupt.
+            TEXT INSTRUCTION: RENDER TEXT. The image should purely be the text "${hookText}" in a massive, bold font filling the frame.
             `;
         case 'CCTV_Security_Footage':
             return `
             STYLE: Security camera footage, fisheye lens distortion, black and white or desaturated.
             ANGLE: High angle looking down (Top-down).
             VIBE: Voyeuristic, raw, "caught on camera", "secret revealed".
-            QUALITY: Very grainy, timestamp overlay style.
+            TEXT INSTRUCTION: DO NOT RENDER TEXT. Just the timestamp overlay.
             `;
         case 'Direct_Flash_Selfie':
             return `
             STYLE: Direct on-camera flash (snapshot aesthetic).
             LIGHTING: Harsh flash, dark background, hard shadows behind the object.
             VIBE: Cursed image, viral internet content, chaotic energy.
-            COLORS: High contrast, greasy skin texture / reflective surfaces.
+            TEXT INSTRUCTION: DO NOT RENDER TEXT.
             `;
         case 'Meme_Format':
             return `
-            STYLE: Classic internet meme template style.
-            CONTENT: Top and bottom blank areas or a standard meme background (but blank).
-            VIBE: "Language of the internet". Not on brand, but highly engaging.
+            STYLE: Classic internet meme template style (Top text / Bottom text style or Twitter screenshot style).
+            CONTENT: A relatable reaction image.
+            VIBE: "Language of the internet".
+            TEXT INSTRUCTION: RENDER TEXT. Include the caption: "${hookText}".
             `;
         case 'Cartoonic_Graphic':
             return `
             STYLE: Simple, crude cartoon or doodle style.
             CONTENT: A stick figure or simple character dealing with a problem.
             VIBE: Storytelling, disarming, "inner child".
+            TEXT INSTRUCTION: RENDER TEXT. Use a speech bubble containing: "${hookText}".
             `;
         default:
-            return `Style: Amateur, raw, unpolished photography.`;
+            return `
+            Style: Amateur, raw, unpolished photography.
+            TEXT INSTRUCTION: DO NOT RENDER TEXT.
+            `;
     }
 };
 
-export const generateHypothesisImage = async (slot: MatrixSlot, productInfo: string, hook: string): Promise<string> => {
+export const generateHypothesisImage = async (
+    slot: MatrixSlot, 
+    productInfo: string, 
+    hook: string,
+    visualReference?: string,
+    targetCountry: string = 'Global'
+): Promise<string> => {
     
-    const formatDirective = getFormatDirectives(slot.format);
+    const formatDirective = getFormatDirectives(slot.format, hook);
     
-    const INDONESIAN_CONTEXT = "Context: Indonesia/Global D2C. Use relatable environments (messy rooms, streets, simple desks).";
+    // Determine if this is a text-heavy format where we WANT text in the image
+    const textHeavyFormats = [
+        'Handwritten_Whiteboard', 
+        'Long_Text_Story', 
+        'Gmail_Letter_UX', 
+        'Billboard_Context', 
+        'MS_Paint_Nostalgia', 
+        'Reddit_Thread_UX', 
+        'Big_Font_Impact',
+        'Meme_Format',
+        'Cartoonic_Graphic'
+    ];
+    const shouldRenderText = textHeavyFormats.includes(slot.format);
 
-    // Critical: Explicitly forbid text rendering because we use Native Overlay
+    // Relax Negative Prompt based on Text Requirement
+    // If we want text, we remove "text", "letters", "watermark" from the negative prompt
+    const standardNegative = "professional studio, bokeh, cinematic lighting, 8k, masterpiece, perfect skin, makeup, model, symmetrical face, text, watermark, logo, letters, beautiful, aesthetic, polished, corporate.";
+    const textFriendlyNegative = "professional studio, bokeh, cinematic lighting, 8k, masterpiece, beautiful, aesthetic, polished, corporate, blur, unreadable text, gibberish.";
+    
+    const negativePrompt = shouldRenderText ? textFriendlyNegative : standardNegative;
+
+    // Localization Logic
+    const getContext = (country: string) => {
+        switch(country) {
+            case 'Indonesia': return "Context: Jakarta/Indonesia. Use local housing architecture, messy cables, tropical lighting, motorcycle helmets in background.";
+            case 'USA': return "Context: USA Suburbs. Wooden floors, american outlets, drywall backgrounds, big box stores.";
+            case 'UK': return "Context: UK. Brick walls, cloudy weather, terraced housing interiors.";
+            case 'Brazil': return "Context: Brazil. Vibrant colors, tropical urban setting, local street style.";
+            default: return "Context: Global D2C. Relatable, non-descript home environments.";
+        }
+    };
+
+    // STRONG Object Anchoring Logic
+    // This forces the model to prioritize the image over the text description of the product
+    let visualReferenceInstruction = "";
+    if (visualReference) {
+        visualReferenceInstruction = `
+        CRITICAL INSTRUCTION - PRODUCT FIDELITY:
+        1. You have been provided with a reference image of the PRODUCT.
+        2. You MUST place this EXACT product (same shape, color, label, packaging) into the scene.
+        3. DO NOT HALLUCINATE a different bottle, box, or item. Look at the input image and render THAT object.
+        4. The product should be the focal point, but integrated naturally into the "Ugly" environment.
+        `;
+    } else {
+        visualReferenceInstruction = `
+        PRODUCT DESCRIPTION:
+        ${productInfo}
+        
+        Since no reference image is provided, generate a realistic product based on the description above. 
+        Ensure it matches the category cues (e.g. Skincare bottle, Supplement jar, Tech gadget).
+        `;
+    }
+
     const prompt = `
-    Create a photo for a social media ad.
-    ASPECT RATIO: 9:16 (Vertical Mobile Wallpaper).
-    
-    THE SCENE:
-    - Subject: ${slot.persona.replace(/_/g, ' ')}
-    - Action: ${slot.action.replace(/_/g, ' ')}
-    - Setting: ${slot.setting.replace(/_/g, ' ')}
-    - Lighting: ${slot.lighting.replace(/_/g, ' ')}
-    - Camera POV: ${slot.pov.replace(/_/g, ' ')}
-    - Emotional Tone: ${slot.tone.replace(/_/g, ' ')}
+    ROLE: You are a specialized 'Lo-Fi' Social Media Ad photographer.
+    TASK: Create a specific ad creative based on the Matrix configuration below.
 
-    PRODUCT CONTEXT:
-    ${productInfo}
+    ${visualReferenceInstruction}
 
-    CRITICAL INSTRUCTION:
-    DO NOT RENDER ANY TEXT. DO NOT ADD CAPTIONS. DO NOT ADD LOGOS.
-    The image must be clean because text will be added programmatically later.
-    
-    THE "UGLY AD" FORMULA (STRICTLY FOLLOW):
-    We are aiming for "Pattern Interrupt" via ugliness/rawness.
-    The goal is Authenticity and Trust, not Beauty.
+    THE MATRIX CONFIGURATION (Execute This):
+    - FORMAT: ${slot.format.replace(/_/g, ' ')}
+    - SETTING: ${slot.setting.replace(/_/g, ' ')} (This is the background/environment)
+    - LIGHTING: ${slot.lighting.replace(/_/g, ' ')} (This determines the mood/quality)
+    - PERSONA POV: ${slot.pov.replace(/_/g, ' ')} (Camera angle)
+    - ACTION: ${slot.action.replace(/_/g, ' ')} (What is happening to the product?)
+    - TONE: ${slot.tone.replace(/_/g, ' ')}
+
+    THE "UGLY AD" PHILOSOPHY:
+    - The photo must look AMATEUR, RAW, and AUTHENTIC. 
+    - It should look like it was taken by a real person on a phone, not a studio photographer.
+    - Use the 'Setting' and 'Lighting' to create this "Ugly" aesthetic, BUT keep the Product clear and recognizable.
+
+    FORMAT DIRECTIVES:
     ${formatDirective}
     
     LOCALIZATION:
-    ${INDONESIAN_CONTEXT}
+    ${getContext(targetCountry)}
     
-    NEGATIVE PROMPT: professional studio, bokeh, cinematic lighting, 8k, masterpiece, perfect skin, makeup, model, symmetrical face, text, watermark, logo, letters, beautiful, aesthetic, polished, corporate.
+    NEGATIVE PROMPT: ${negativePrompt}
     `;
+
+    const parts: any[] = [{ text: prompt }];
+    
+    // Inject Visual Reference if available (Multimodal)
+    if (visualReference) {
+        parts.unshift(imageB64ToGenerativePart(visualReference));
+    }
 
     try {
         const response = await ai.models.generateContent({
             model: 'gemini-2.5-flash-image',
-            contents: { parts: [{ text: prompt }] },
+            contents: { parts },
             config: {
                 responseModalities: [Modality.IMAGE],
             }
@@ -327,7 +398,35 @@ export const generateHookVariations = async (originalHook: string, productContex
 
 // Legacy services
 export const generateCampaignOptions = async (blueprint: CampaignBlueprint): Promise<CampaignOptions> => {
-    return { personaVariations: [], strategicAngles: [], buyingTriggers: [] };
+    // Simulating AI Strategy Generation for DNA Step
+    const prompt = `
+    Analyze this product and generate ad strategy options.
+    Product: ${blueprint.productAnalysis.name}
+    Benefit: ${blueprint.productAnalysis.keyBenefit}
+    Persona: ${blueprint.targetPersona.description}
+
+    Generate:
+    1. 5 Persona Variations (e.g. "The Skeptic", "The Busy Mom")
+    2. 5 Strategic Angles (e.g. "Vs Competitor", "Scientific Mechanism")
+    3. 5 Buying Triggers/Hooks (Short phrases)
+
+    Return JSON.
+    `;
+    
+    // NOTE: In a real app, call Gemini here. Returning mock data for UI flow connectivity.
+    return {
+        personaVariations: [
+            { ...blueprint.targetPersona, description: "The Skeptic who tried everything" },
+            { ...blueprint.targetPersona, description: "The Busy Professional" },
+            { ...blueprint.targetPersona, description: "The Budget Conscious" }
+        ],
+        strategicAngles: ["Us vs Them", "The scientific breakthrough", "The 'Ugly Truth'", "Cost of Inaction", "Identity Shift"],
+        buyingTriggers: [
+            { name: "Fear of Missing Out" },
+            { name: "Social Proof Stack" },
+            { name: "Instant Gratification" }
+        ]
+    };
 };
 export const refineVisualPrompt = async (concept: AdConcept, blueprint: CampaignBlueprint): Promise<string> => { return ""; };
 export const getDesignSuggestions = async (concept: AdConcept, imageBase64: string, blueprint: CampaignBlueprint): Promise<any> => { return {}; };

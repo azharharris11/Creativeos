@@ -1,10 +1,11 @@
 
 import React, { useState, useRef } from 'react';
-import { LockIcon, UnlockIcon, UploadIcon, FileTextIcon, SparklesIcon, ScanEyeIcon } from './icons';
+import { LockIcon, UnlockIcon, UploadIcon, FileTextIcon, SparklesIcon, ScanEyeIcon, GlobeIcon } from './icons';
 import { extractAnchorFromImage, extractAnchorFromText } from '../services/geminiService';
+import { TargetCountry } from '../types';
 
 interface InputFormProps {
-  onConfirmAnchor: (productInfo: string, goldenHook: string) => void;
+  onConfirmAnchor: (productInfo: string, goldenHook: string, visualRef: string | undefined, country: string) => void;
 }
 
 type InputMode = 'manual' | 'image_scan' | 'text_scan';
@@ -12,18 +13,21 @@ type InputMode = 'manual' | 'image_scan' | 'text_scan';
 export const InputForm: React.FC<InputFormProps> = ({ onConfirmAnchor }) => {
   const [productInfo, setProductInfo] = useState('');
   const [goldenHook, setGoldenHook] = useState('');
-  const [isLocked, setIsLocked] = useState(false);
+  const [targetCountry, setTargetCountry] = useState<TargetCountry>('Global');
+  const [visualReference, setVisualReference] = useState<string | undefined>(undefined);
   
+  const [isLocked, setIsLocked] = useState(false);
   const [mode, setMode] = useState<InputMode>('manual');
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const productRefRef = useRef<HTMLInputElement>(null);
   const [rawText, setRawText] = useState('');
 
   const handleLock = (e: React.FormEvent) => {
       e.preventDefault();
       if(!productInfo || !goldenHook) return alert("Please fill in all fields.");
       setIsLocked(true);
-      onConfirmAnchor(productInfo, goldenHook);
+      onConfirmAnchor(productInfo, goldenHook, visualReference, targetCountry);
   };
 
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -38,13 +42,25 @@ export const InputForm: React.FC<InputFormProps> = ({ onConfirmAnchor }) => {
                   const result = await extractAnchorFromImage(base64String);
                   setProductInfo(result.productInfo);
                   setGoldenHook(result.goldenHook);
-                  setMode('manual'); // Switch back to show filled fields
+                  setMode('manual'); 
               } catch (error) {
                   console.error(error);
                   alert("Could not analyze image. Please try manual input.");
               } finally {
                   setIsAnalyzing(false);
               }
+          };
+          reader.readAsDataURL(file);
+      }
+  };
+  
+  const handleVisualRefUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+      if (e.target.files && e.target.files[0]) {
+          const file = e.target.files[0];
+          const reader = new FileReader();
+          reader.onloadend = () => {
+              const base64String = (reader.result as string).split(',')[1];
+              setVisualReference(base64String);
           };
           reader.readAsDataURL(file);
       }
@@ -159,6 +175,51 @@ export const InputForm: React.FC<InputFormProps> = ({ onConfirmAnchor }) => {
 
             {(mode === 'manual' || isLocked) && (
                 <form onSubmit={handleLock} className="space-y-6 animate-fadeIn">
+                    
+                    {/* Country & Visual Reference - NEW */}
+                    <div className="grid grid-cols-2 gap-4">
+                         <div>
+                            <label className="block text-xs font-bold text-gray-400 uppercase mb-2 flex items-center gap-1">
+                                <GlobeIcon className="w-3 h-3" /> Target Country
+                            </label>
+                            <select 
+                                disabled={isLocked}
+                                value={targetCountry}
+                                onChange={e => setTargetCountry(e.target.value as TargetCountry)}
+                                className={`w-full bg-gray-950 border ${isLocked ? 'border-green-900 text-gray-400' : 'border-gray-700 text-white'} rounded-lg p-3 focus:ring-2 focus:ring-cyan-500 outline-none text-sm`}
+                            >
+                                <option value="Global">Global / Generic</option>
+                                <option value="Indonesia">Indonesia</option>
+                                <option value="USA">USA</option>
+                                <option value="UK">UK</option>
+                                <option value="Brazil">Brazil</option>
+                            </select>
+                        </div>
+                        
+                        <div>
+                            <label className="block text-xs font-bold text-gray-400 uppercase mb-2 flex items-center gap-1">
+                                <UploadIcon className="w-3 h-3" /> Product Reference (Optional)
+                            </label>
+                            <div className={`relative flex items-center justify-center w-full border rounded-lg h-[46px] ${visualReference ? 'bg-green-900/20 border-green-500/50' : 'bg-gray-950 border-gray-700'}`}>
+                                {visualReference ? (
+                                    <span className="text-xs text-green-400 flex items-center gap-1"><SparklesIcon className="w-3 h-3"/> Image Loaded</span>
+                                ) : (
+                                    <>
+                                        <input 
+                                            type="file"
+                                            ref={productRefRef}
+                                            onChange={handleVisualRefUpload}
+                                            disabled={isLocked}
+                                            className="absolute inset-0 opacity-0 cursor-pointer disabled:cursor-not-allowed"
+                                            accept="image/*"
+                                        />
+                                        <span className="text-xs text-gray-500">Click to Upload Product</span>
+                                    </>
+                                )}
+                            </div>
+                        </div>
+                    </div>
+
                     <div>
                         <label className="block text-xs font-bold text-cyan-500 uppercase mb-2">Product Context</label>
                         <textarea 
@@ -185,7 +246,7 @@ export const InputForm: React.FC<InputFormProps> = ({ onConfirmAnchor }) => {
 
                     {!isLocked && (
                         <button type="submit" className="w-full bg-cyan-600 hover:bg-cyan-500 text-white font-black uppercase py-4 rounded-lg tracking-widest transition-all hover:scale-[1.02]">
-                            Lock & Initialize Matrix
+                            Lock & Validate DNA
                         </button>
                     )}
                 </form>
@@ -193,7 +254,7 @@ export const InputForm: React.FC<InputFormProps> = ({ onConfirmAnchor }) => {
 
             {isLocked && (
                 <div className="mt-6 text-center text-green-500 font-mono text-sm animate-pulse border-t border-green-900/30 pt-4">
-                    /// SYSTEM LOCKED. INITIALIZING MATRIX...
+                    /// SYSTEM LOCKED. REDIRECTING TO DNA VALIDATION...
                 </div>
             )}
         </div>

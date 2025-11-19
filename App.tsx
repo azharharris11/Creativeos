@@ -5,7 +5,8 @@ import { InputForm } from './components/InputForm';
 import { MatrixBuilder } from './components/MatrixBuilder';
 import { RealitySimulator } from './components/RealitySimulator';
 import { MindMapCanvas } from './components/MindMapCanvas';
-import { AppStep, MatrixSlot, Hypothesis, ViewMode, RemixMode } from './types';
+import { DnaValidationStep } from './components/DnaValidationStep';
+import { AppStep, MatrixSlot, Hypothesis, ViewMode, RemixMode, CampaignBlueprint, TargetCountry } from './types';
 import { generateHypothesisImage, roastHypothesis, generateHookVariations } from './services/geminiService';
 import { NetworkIcon, LayoutGridIcon } from './components/icons';
 
@@ -19,12 +20,44 @@ function App() {
   
   const [productContext, setProductContext] = useState('');
   const [goldenHook, setGoldenHook] = useState('');
+  const [visualReference, setVisualReference] = useState<string | undefined>(undefined);
+  const [targetCountry, setTargetCountry] = useState<string>('Global');
+  
   const [hypotheses, setHypotheses] = useState<Hypothesis[]>([]);
+  
+  // Interim Blueprint State for Validation Step
+  const [blueprint, setBlueprint] = useState<CampaignBlueprint>({
+      productAnalysis: { name: '', keyBenefit: '' },
+      targetPersona: { description: 'General Audience', age: '25-34', creatorType: 'UGC', painPoints: [], desiredOutcomes: [] },
+      adDna: { 
+          salesMechanism: 'Direct Response', copyPattern: 'Problem-Agitate-Solve', persuasionFormula: 'AIDA', 
+          specificLanguagePatterns: [], toneOfVoice: 'Authentic', socialProofElements: '', objectionHandling: '', 
+          visualStyle: 'Lo-Fi', targetCountry: 'Global', offerSummary: '', cta: 'Shop Now' 
+      }
+  });
 
-  const handleAnchorConfirmed = (product: string, hook: string) => {
+  const handleAnchorConfirmed = (product: string, hook: string, visualRef: string | undefined, country: string) => {
       setProductContext(product);
       setGoldenHook(hook);
-      setTimeout(() => setCurrentStep('matrix'), 1500);
+      setVisualReference(visualRef);
+      setTargetCountry(country);
+      
+      // Update blueprint with initial data
+      setBlueprint(prev => ({
+          ...prev,
+          visualReference: visualRef,
+          productAnalysis: { ...prev.productAnalysis, name: product, keyBenefit: hook },
+          adDna: { ...prev.adDna, targetCountry: country as TargetCountry }
+      }));
+
+      setCurrentStep('validateBlueprint');
+  };
+
+  const handleBlueprintValidated = (validatedBlueprint: CampaignBlueprint) => {
+      setBlueprint(validatedBlueprint);
+      setProductContext(validatedBlueprint.productAnalysis.name); 
+      // We validated the DNA, now we move to the Visual Matrix
+      setCurrentStep('matrix');
   };
 
   // UPDATE: Fix Data Wipe - Append new hypotheses instead of overwriting
@@ -55,7 +88,14 @@ function App() {
       try {
           setHypotheses(prev => prev.map(item => item.id === h.id ? { ...item, isGenerating: true, error: undefined } : item));
           
-          const imageUrl = await generateHypothesisImage(h.matrixConfig, productContext, h.hook);
+          // Pass the persisted visual reference and country to the generation service
+          const imageUrl = await generateHypothesisImage(
+              h.matrixConfig, 
+              productContext, 
+              h.hook,
+              visualReference,
+              targetCountry
+          );
           
           setHypotheses(prev => prev.map(item => item.id === h.id ? { ...item, imageUrl, isGenerating: false } : item));
       } catch (e: any) {
@@ -155,6 +195,16 @@ function App() {
       switch(currentStep) {
           case 'landing': return <LandingPage onStart={() => setCurrentStep('anchor')} />;
           case 'anchor': return <InputForm onConfirmAnchor={handleAnchorConfirmed} />;
+          case 'validateBlueprint': return (
+              <DnaValidationStep 
+                initialBlueprint={blueprint} 
+                referenceImage={visualReference ? `data:image/jpeg;base64,${visualReference}` : ''} 
+                onStartCampaign={handleBlueprintValidated}
+                onBack={() => setCurrentStep('anchor')}
+                allowVisualExploration={false}
+                onAllowVisualExplorationChange={() => {}}
+              />
+          );
           case 'matrix': return <MatrixBuilder onGenerate={handleMatrixExecution} />;
           case 'reality': return (
             <RealitySimulator 
@@ -179,7 +229,7 @@ function App() {
                     <div className="max-w-full mx-auto flex justify-between items-center px-4">
                         <div className="font-black text-xl tracking-tighter text-white flex items-center gap-2">
                             CREATIVE<span className="text-cyan-500">OS</span> 
-                            <span className="text-xs bg-gray-800 px-2 py-0.5 rounded text-gray-400 hidden sm:inline-block">v2.0 HYPOTHESIS ENGINE</span>
+                            <span className="text-xs bg-gray-800 px-2 py-0.5 rounded text-gray-400 hidden sm:inline-block">v2.1 HYPOTHESIS ENGINE</span>
                         </div>
                         
                         {hypotheses.length > 0 && (
@@ -202,9 +252,11 @@ function App() {
                         <div className="hidden md:flex gap-2 text-xs font-mono">
                             <span className={currentStep === 'anchor' ? 'text-cyan-400 font-bold' : 'text-gray-600'}>01 ANCHOR</span>
                             <span className="text-gray-700">/</span>
-                            <span className={currentStep === 'matrix' ? 'text-cyan-400 font-bold' : 'text-gray-600'}>02 MATRIX</span>
+                            <span className={currentStep === 'validateBlueprint' ? 'text-cyan-400 font-bold' : 'text-gray-600'}>02 DNA</span>
                             <span className="text-gray-700">/</span>
-                            <span className={currentStep === 'reality' ? 'text-cyan-400 font-bold' : 'text-gray-600'}>03 REALITY</span>
+                            <span className={currentStep === 'matrix' ? 'text-cyan-400 font-bold' : 'text-gray-600'}>03 MATRIX</span>
+                            <span className="text-gray-700">/</span>
+                            <span className={currentStep === 'reality' ? 'text-cyan-400 font-bold' : 'text-gray-600'}>04 REALITY</span>
                         </div>
                     </div>
                 </nav>

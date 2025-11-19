@@ -83,23 +83,46 @@ export const MatrixBuilder: React.FC<MatrixBuilderProps> = ({ onGenerate }) => {
         
         const getRandom = (arr: string[]) => arr[Math.floor(Math.random() * arr.length)];
 
-        // Helper to randomize a slot (excluding ID)
-        const randomizeSlot = (slotId: 'B' | 'C') => {
-            // @ts-ignore - Dynamic assignment
-            newSlots[slotId] = {
-                ...newSlots[slotId],
-                format: getRandom(SELECT_OPTIONS.format),
-                setting: getRandom(SELECT_OPTIONS.setting),
-                lighting: getRandom(SELECT_OPTIONS.lighting),
-                persona: getRandom(SELECT_OPTIONS.persona),
-                pov: getRandom(SELECT_OPTIONS.pov),
-                action: getRandom(SELECT_OPTIONS.action),
-                tone: getRandom(SELECT_OPTIONS.tone),
-            };
+        // Helper to randomize a slot (excluding ID) with collision detection
+        const randomizeSlot = (slotId: 'B' | 'C', comparisons: ('A' | 'B')[]) => {
+            let safe = false;
+            let attempts = 0;
+            
+            // @ts-ignore
+            let candidate: any = {};
+
+            while (!safe && attempts < 20) {
+                candidate = {
+                    ...newSlots[slotId],
+                    format: getRandom(SELECT_OPTIONS.format),
+                    setting: getRandom(SELECT_OPTIONS.setting),
+                    lighting: getRandom(SELECT_OPTIONS.lighting),
+                    persona: getRandom(SELECT_OPTIONS.persona),
+                    pov: getRandom(SELECT_OPTIONS.pov),
+                    action: getRandom(SELECT_OPTIONS.action),
+                    tone: getRandom(SELECT_OPTIONS.tone),
+                };
+
+                // Check collisions against comparison slots
+                let collisions = 0;
+                comparisons.forEach(comp => {
+                    if (candidate.format === newSlots[comp].format) collisions++;
+                    if (candidate.setting === newSlots[comp].setting) collisions++;
+                });
+                
+                if (collisions === 0) safe = true;
+                attempts++;
+            }
+            
+            // @ts-ignore
+            newSlots[slotId] = candidate;
         };
 
-        randomizeSlot('B');
-        randomizeSlot('C');
+        // Slot A stays effectively as is (Anchor) or could be randomized if needed. 
+        // Here we keep A stable and chaotic B and C around it.
+        
+        randomizeSlot('B', ['A']);
+        randomizeSlot('C', ['A', 'B']);
         
         setSlots(newSlots);
     };

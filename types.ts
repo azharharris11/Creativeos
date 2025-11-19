@@ -9,7 +9,10 @@ export interface TargetPersona {
   creatorType: string;
 }
 
+export type TargetCountry = 'Indonesia' | 'USA' | 'UK' | 'Brazil' | 'India' | 'Germany' | 'Global';
+
 export interface CampaignBlueprint {
+  visualReference?: string; // Base64 of product image
   productAnalysis: {
     name: string;
     keyBenefit: string;
@@ -24,7 +27,7 @@ export interface CampaignBlueprint {
     socialProofElements: string;
     objectionHandling: string;
     visualStyle: string;
-    targetCountry: string;
+    targetCountry: TargetCountry | string;
     offerSummary: string;
     cta: string;
   };
@@ -126,7 +129,7 @@ export interface Hypothesis {
   error?: string;
 }
 
-export type AppStep = 'landing' | 'anchor' | 'matrix' | 'reality' | 'input' | 'validateBlueprint' | 'dashboard';
+export type AppStep = 'landing' | 'anchor' | 'validateBlueprint' | 'matrix' | 'reality' | 'input' | 'dashboard';
 
 // --- CAMPAIGN & MINDMAP TYPES ---
 
