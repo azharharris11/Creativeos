@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { MatrixSlot, MATRIX_DEFAULTS, MatrixVar_Format, MatrixSlot as SlotType } from '../types';
-import { ShieldAlertIcon, ZapIcon, DiceIcon, InfoIcon } from './icons';
+import { ShieldAlertIcon, ZapIcon, DiceIcon, InfoIcon, PackageIcon } from './icons';
 
 interface MatrixBuilderProps {
     onGenerate: (config: Record<'A' | 'B' | 'C', MatrixSlot>) => void;
@@ -159,7 +159,12 @@ export const MatrixBuilder: React.FC<MatrixBuilderProps> = ({ onGenerate }) => {
                 </div>
             )}
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 relative">
+                {/* Central Product Reminder - Visual Anchor */}
+                <div className="hidden md:flex absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-10 bg-black border-2 border-gray-700 rounded-full p-4 shadow-2xl items-center justify-center opacity-50 hover:opacity-100 transition-opacity">
+                    <PackageIcon className="w-6 h-6 text-gray-500" />
+                </div>
+
                 {(['A', 'B', 'C'] as const).map(id => (
                     <div key={id} className={`relative p-6 rounded-xl border-2 ${SLOT_COLORS[id]} backdrop-blur-sm transition-all`}>
                         <div className="absolute -top-4 left-1/2 -translate-x-1/2 bg-gray-900 px-4 py-1 rounded-full border border-gray-700 text-xl font-black text-white shadow-xl">

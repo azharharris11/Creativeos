@@ -103,22 +103,6 @@ const drawOverlay = (ctx: CanvasRenderingContext2D, canvas: HTMLCanvasElement, o
     });
 };
 
-// Helper for AdConcept text overlay
-const drawTextOverlay = (ctx: CanvasRenderingContext2D, canvas: HTMLCanvasElement, text: string, style?: TextStyle) => {
-    if (!style) return;
-    // Basic implementation using style properties
-    const fontSize = (style.fontSize / 100) * canvas.width;
-    ctx.font = `${style.fontWeight} ${fontSize}px ${style.fontFamily}`;
-    ctx.fillStyle = style.color;
-    ctx.textAlign = style.textAlign as CanvasTextAlign;
-    // x, y based on percentages
-    const x = (style.left / 100) * canvas.width;
-    const y = (style.top / 100) * canvas.height;
-    
-    // Basic Text Fill
-    ctx.fillText(text, x, y + fontSize); // simple baseline adjustment
-}
-
 export const compositeHypothesisImage = async (hypothesis: Hypothesis): Promise<Blob | null> => {
     if (!hypothesis.imageUrl) return null;
 
@@ -162,8 +146,12 @@ export const exportHypothesesToZip = async (hypotheses: Hypothesis[], campaignNa
     for (const h of validHypotheses) {
         const blob = await compositeHypothesisImage(h);
         if (blob) {
-            const filename = `${campaignName}_${h.slotId}_${h.matrixConfig.format}.jpg`;
-            zip.file(filename, blob);
+            // CREATE FOLDER STRUCTURE: Persona / Format / Image
+            const folderName = `${h.matrixConfig.persona}/${h.matrixConfig.format}`;
+            const filename = `${campaignName}_${h.slotId}.jpg`;
+            
+            // Add to zip in folder
+            zip.folder(folderName)?.file(filename, blob);
 
             csvRows.push([
                 `"${campaignName}"`,
@@ -173,7 +161,7 @@ export const exportHypothesesToZip = async (hypotheses: Hypothesis[], campaignNa
                 `"${h.hook.replace(/"/g, '""')}"`,
                 `"${h.aiRoast?.thumbstopScore || 0}"`,
                 `"${h.aiRoast?.vibe || ''}"`,
-                `"${filename}"`
+                `"${folderName}/${filename}"`
             ].join(','));
         }
     }
@@ -218,12 +206,7 @@ export const compositeTextOnImage = async (imageUrl: string,
             
             ctx.drawImage(img, 0, 0);
             
-            if (hookData.text && hookData.style) {
-                drawTextOverlay(ctx, canvas, hookData.text, hookData.style);
-            }
-            if (headlineData.text && headlineData.style) {
-                drawTextOverlay(ctx, canvas, headlineData.text, headlineData.style);
-            }
+            // TODO: Add support for AdConcept overlays later if needed
             
             resolve(canvas.toDataURL('image/jpeg', 0.95));
         };
@@ -238,7 +221,6 @@ export const exportConceptsToZip = async (concepts: AdConcept[]) => {
     for (let i = 0; i < concepts.length; i++) {
         const c = concepts[i];
         if (c.imageUrls && c.imageUrls.length > 0) {
-            // Save first image for now
             const blob = dataURLtoBlob(c.imageUrls[0]); 
             if (blob) {
                 zip.file(`${c.adSetName}_${i}.jpg`, blob);

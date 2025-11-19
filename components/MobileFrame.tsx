@@ -72,13 +72,19 @@ export const MobileFrame: React.FC<MobileFrameProps> = ({ hypothesis, onRegenera
         setIsExporting(false);
     };
 
+    const getPersonaHashTags = (persona: string) => {
+        if (persona.includes('Parent')) return '#momlife #parenthood';
+        if (persona.includes('Gen_Z')) return '#fyp #trending';
+        if (persona.includes('Worker')) return '#worklife #hustle';
+        return '#lifehack #fyp';
+    }
+
     // Render text based on config
     const renderOverlayText = () => {
         if (!overlayConfig.enabled) return null;
         
         const topPos = `${overlayConfig.yPosition}%`;
         const textAlignClass = overlayConfig.textAlign === 'left' ? 'text-left' : overlayConfig.textAlign === 'right' ? 'text-right' : 'text-center';
-        const alignSelf = overlayConfig.textAlign === 'left' ? 'flex-start' : overlayConfig.textAlign === 'right' ? 'flex-end' : 'center';
         
         // Map font family to CSS class or style
         const fontMap: Record<string, string> = {
@@ -140,7 +146,8 @@ export const MobileFrame: React.FC<MobileFrameProps> = ({ hypothesis, onRegenera
                     {hypothesis.isGenerating ? (
                         <div className="w-full h-full flex flex-col items-center justify-center text-green-500 font-mono p-4 text-center animate-pulse">
                             <SparklesIcon className="w-8 h-8 mb-4" />
-                            <div>GENERATING VISUALS...</div>
+                            <div className="uppercase font-bold text-sm">{hypothesis.generationStatus?.replace('_', ' ') || 'PROCESSING'}...</div>
+                            <div className="text-xs text-gray-500 mt-2">AI is building your hypothesis</div>
                         </div>
                     ) : hypothesis.imageUrl ? (
                         <img src={hypothesis.imageUrl} alt="Generated Ad" className="w-full h-full object-cover" />
@@ -153,17 +160,17 @@ export const MobileFrame: React.FC<MobileFrameProps> = ({ hypothesis, onRegenera
                     {/* Fake UI */}
                     <div className="absolute inset-0 pointer-events-none z-10 flex flex-col justify-between p-4">
                         <div className="flex justify-between items-center pt-2 text-white drop-shadow-md opacity-70">
-                            <div className="text-[10px] font-bold">Brand</div>
+                            <div className="text-[10px] font-bold">{hypothesis.brandName || 'Brand'}</div>
                             <div className="text-[8px] bg-gray-500/50 px-1 rounded">Sponsored</div>
                         </div>
                         <div className="text-white drop-shadow-lg pb-8 opacity-90">
                             <div className="font-bold text-xs mb-1">@{hypothesis.matrixConfig.persona}</div>
-                            <div className="text-xs mb-2 opacity-80">Check out this product... #fyp</div>
+                            <div className="text-xs mb-2 opacity-80">Check out this product... {getPersonaHashTags(hypothesis.matrixConfig.persona)}</div>
                             <div className="w-full py-2 text-center font-bold text-[10px] rounded bg-blue-600 text-white">Shop Now</div>
                         </div>
                         <div className="absolute right-2 bottom-20 flex flex-col gap-4 items-center text-white opacity-90">
                              <HeartIcon className="w-6 h-6" />
-                             <div className="text-[10px] font-bold">1.2M</div>
+                             <div className="text-[10px] font-bold">{(Math.random() * (100 - 1) + 1).toFixed(1)}K</div>
                         </div>
                     </div>
                 </div>

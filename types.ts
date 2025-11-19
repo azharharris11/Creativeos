@@ -12,7 +12,8 @@ export interface TargetPersona {
 export type TargetCountry = 'Indonesia' | 'USA' | 'UK' | 'Brazil' | 'India' | 'Germany' | 'Global';
 
 export interface CampaignBlueprint {
-  visualReference?: string; // Base64 of product image
+  brandName: string; // NEW: For UI Overlay
+  visualReference?: string; // NEW: Base64 of product image for Multimodal Prompting
   productAnalysis: {
     name: string;
     keyBenefit: string;
@@ -110,6 +111,8 @@ export interface OverlayConfig {
 
 export type RemixMode = 'scale_vibe' | 'scale_visual';
 
+export type GenerationStatus = 'idle' | 'prompting' | 'rendering' | 'roasting' | 'completed' | 'failed';
+
 export interface Hypothesis {
   id: string;
   slotId: string;
@@ -118,6 +121,8 @@ export interface Hypothesis {
   visualPrompt: string;
   imageUrl?: string;
   isGenerating: boolean;
+  generationStatus?: GenerationStatus; // NEW: Granular status
+  brandName?: string; // NEW: Passed for UI overlay
   aiRoast?: {
     vibe: string;
     targetAudience: string;

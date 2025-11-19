@@ -1,5 +1,6 @@
 
 
+
 import React, { useRef, useEffect, useState, useMemo } from 'react';
 import { Hypothesis, MatrixSlot, OverlayConfig, RemixMode } from '../types';
 import { ZoomInIcon, ZoomOutIcon, LocateIcon, CopyIcon, ShieldAlertIcon, EditIcon } from './icons';
@@ -94,7 +95,8 @@ export const MindMapCanvas: React.FC<MindMapCanvasProps> = ({
     // Lineage Lines (Parent -> Child)
     const lineageLines = useMemo(() => {
         const lines: { x1: number, y1: number, x2: number, y2: number }[] = [];
-        const posMap = new Map(positionedHypotheses.map(h => [h.id, h]));
+        // Explicitly type the Map to match positionedHypotheses items
+        const posMap = new Map<string, typeof positionedHypotheses[0]>(positionedHypotheses.map(h => [h.id, h]));
 
         positionedHypotheses.forEach(h => {
             if (h.parentId && posMap.has(h.parentId)) {

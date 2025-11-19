@@ -6,7 +6,7 @@ import { MatrixBuilder } from './components/MatrixBuilder';
 import { RealitySimulator } from './components/RealitySimulator';
 import { MindMapCanvas } from './components/MindMapCanvas';
 import { DnaValidationStep } from './components/DnaValidationStep';
-import { AppStep, MatrixSlot, Hypothesis, ViewMode, RemixMode, CampaignBlueprint, TargetCountry } from './types';
+import { AppStep, MatrixSlot, Hypothesis, ViewMode, RemixMode, CampaignBlueprint, TargetCountry, MATRIX_DEFAULTS, MatrixVar_Setting, MatrixVar_Lighting, MatrixVar_POV } from './types';
 import { generateHypothesisImage, roastHypothesis, generateHookVariations } from './services/geminiService';
 import { NetworkIcon, LayoutGridIcon } from './components/icons';
 
@@ -18,15 +18,18 @@ function App() {
   const [currentStep, setCurrentStep] = useState<AppStep>('landing');
   const [viewMode, setViewMode] = useState<ViewMode>('linear');
   
+  // Context State
   const [productContext, setProductContext] = useState('');
   const [goldenHook, setGoldenHook] = useState('');
   const [visualReference, setVisualReference] = useState<string | undefined>(undefined);
   const [targetCountry, setTargetCountry] = useState<string>('Global');
+  const [brandName, setBrandName] = useState<string>('Brand');
   
   const [hypotheses, setHypotheses] = useState<Hypothesis[]>([]);
   
   // Interim Blueprint State for Validation Step
   const [blueprint, setBlueprint] = useState<CampaignBlueprint>({
+      brandName: '',
       productAnalysis: { name: '', keyBenefit: '' },
       targetPersona: { description: 'General Audience', age: '25-34', creatorType: 'UGC', painPoints: [], desiredOutcomes: [] },
       adDna: { 
@@ -36,15 +39,17 @@ function App() {
       }
   });
 
-  const handleAnchorConfirmed = (product: string, hook: string, visualRef: string | undefined, country: string) => {
+  const handleAnchorConfirmed = (product: string, hook: string, visualRef: string | undefined, country: string, brand: string) => {
       setProductContext(product);
       setGoldenHook(hook);
       setVisualReference(visualRef);
       setTargetCountry(country);
+      setBrandName(brand);
       
       // Update blueprint with initial data
       setBlueprint(prev => ({
           ...prev,
+          brandName: brand,
           visualReference: visualRef,
           productAnalysis: { ...prev.productAnalysis, name: product, keyBenefit: hook },
           adDna: { ...prev.adDna, targetCountry: country as TargetCountry }
@@ -74,6 +79,8 @@ function App() {
           hook: goldenHook,
           visualPrompt: '',
           isGenerating: true,
+          generationStatus: 'idle',
+          brandName: brandName,
           overlay: { enabled: true, text: goldenHook, style: 'IG_Story', yPosition: 50 }
       }));
       
@@ -86,7 +93,7 @@ function App() {
 
   const generateImageForHypothesis = async (h: Hypothesis) => {
       try {
-          setHypotheses(prev => prev.map(item => item.id === h.id ? { ...item, isGenerating: true, error: undefined } : item));
+          setHypotheses(prev => prev.map(item => item.id === h.id ? { ...item, isGenerating: true, generationStatus: 'prompting', error: undefined } : item));
           
           // Pass the persisted visual reference and country to the generation service
           const imageUrl = await generateHypothesisImage(
@@ -97,10 +104,10 @@ function App() {
               targetCountry
           );
           
-          setHypotheses(prev => prev.map(item => item.id === h.id ? { ...item, imageUrl, isGenerating: false } : item));
+          setHypotheses(prev => prev.map(item => item.id === h.id ? { ...item, imageUrl, isGenerating: false, generationStatus: 'completed' } : item));
       } catch (e: any) {
           console.error("Generation error", e);
-          setHypotheses(prev => prev.map(item => item.id === h.id ? { ...item, isGenerating: false, error: e.message } : item));
+          setHypotheses(prev => prev.map(item => item.id === h.id ? { ...item, isGenerating: false, generationStatus: 'failed', error: e.message } : item));
       }
   };
 
@@ -108,11 +115,14 @@ function App() {
       const hypothesis = hypotheses.find(h => h.id === id);
       if(!hypothesis || !hypothesis.imageUrl) return;
 
+      setHypotheses(prev => prev.map(item => item.id === id ? { ...item, generationStatus: 'roasting' } : item));
+
       try {
         const roastData = await roastHypothesis(hypothesis.imageUrl.split(',')[1], hypothesis.hook);
-        setHypotheses(prev => prev.map(item => item.id === id ? { ...item, aiRoast: roastData } : item));
+        setHypotheses(prev => prev.map(item => item.id === id ? { ...item, aiRoast: roastData, generationStatus: 'completed' } : item));
       } catch (e) {
           console.error("Roast failed", e);
+          setHypotheses(prev => prev.map(item => item.id === id ? { ...item, generationStatus: 'completed' } : item));
       }
   };
 
@@ -132,7 +142,25 @@ function App() {
       }
   };
 
-  // --- REMIX LOGIC ---
+  // --- SMART REMIX LOGIC ---
+  
+  const randomizeVisuals = (config: MatrixSlot): MatrixSlot => {
+      const getRandom = (arr: string[]) => arr[Math.floor(Math.random() * arr.length)];
+      
+      // We keep Format, Persona, and Action to maintain the core concept
+      // We randomize Setting, Lighting, and POV to create visual variety
+      const settings: MatrixVar_Setting[] = ['Messy_Bedroom', 'Bathroom_Mirror_Dirty', 'Car_Dashboard_Traffic', 'Supermarket_Aisle', 'Street_Pavement', 'Kitchen_Table_Cluttered', 'Blank_Wall_Background'];
+      const lightings: MatrixVar_Lighting[] = ['Harsh_Flash_ON', 'Bad_Fluorescent_Office', 'Dim_Bedroom_Lamp', 'Overexposed_Sunlight', 'Screen_Glow_Blue'];
+      const povs: MatrixVar_POV[] = ['Selfie_Bad_Angle', 'First_Person_Shaky', 'Security_Cam_TopDown', 'Street_Level_Wide'];
+      
+      return {
+          ...config,
+          setting: getRandom(settings),
+          lighting: getRandom(lightings),
+          pov: getRandom(povs)
+      };
+  };
+
   const handleRemix = async (mode: RemixMode, parent: Hypothesis) => {
       if (mode === 'scale_vibe') {
           // Generate 3 new hooks
@@ -141,11 +169,13 @@ function App() {
           const newHypotheses: Hypothesis[] = newHooks.map((hook, i) => ({
               id: simpleUUID(),
               slotId: `${parent.slotId}_vibe_${i+1}`,
-              matrixConfig: { ...parent.matrixConfig }, // Keep visuals
+              matrixConfig: { ...parent.matrixConfig }, // Keep visuals identical
               hook: hook,
               visualPrompt: '',
               isGenerating: true,
+              generationStatus: 'idle',
               parentId: parent.id,
+              brandName: brandName,
               overlay: { ...parent.overlay!, text: hook } // Update overlay text
           }));
           
@@ -153,10 +183,9 @@ function App() {
           newHypotheses.forEach(h => generateImageForHypothesis(h));
 
       } else if (mode === 'scale_visual') {
-          // Keep hook, vary matrix (simplified randomization for now)
+          // Keep hook, RANDOMIZE visual variables (Smart Remix)
           const newHypotheses: Hypothesis[] = [1, 2, 3].map((i) => {
-             const newConfig = { ...parent.matrixConfig };
-             // Logic to randomize config slightly could go here
+             const newConfig = randomizeVisuals(parent.matrixConfig);
              return {
                   id: simpleUUID(),
                   slotId: `${parent.slotId}_vis_${i}`,
@@ -164,7 +193,9 @@ function App() {
                   hook: parent.hook,
                   visualPrompt: '',
                   isGenerating: true,
+                  generationStatus: 'idle',
                   parentId: parent.id,
+                  brandName: brandName,
                   overlay: parent.overlay
              };
           });

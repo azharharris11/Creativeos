@@ -1,11 +1,11 @@
 
 import React, { useState, useRef } from 'react';
-import { LockIcon, UnlockIcon, UploadIcon, FileTextIcon, SparklesIcon, ScanEyeIcon, GlobeIcon } from './icons';
+import { LockIcon, UnlockIcon, UploadIcon, FileTextIcon, SparklesIcon, ScanEyeIcon, GlobeIcon, TagIcon } from './icons';
 import { extractAnchorFromImage, extractAnchorFromText } from '../services/geminiService';
 import { TargetCountry } from '../types';
 
 interface InputFormProps {
-  onConfirmAnchor: (productInfo: string, goldenHook: string, visualRef: string | undefined, country: string) => void;
+  onConfirmAnchor: (productInfo: string, goldenHook: string, visualRef: string | undefined, country: string, brandName: string) => void;
 }
 
 type InputMode = 'manual' | 'image_scan' | 'text_scan';
@@ -13,6 +13,7 @@ type InputMode = 'manual' | 'image_scan' | 'text_scan';
 export const InputForm: React.FC<InputFormProps> = ({ onConfirmAnchor }) => {
   const [productInfo, setProductInfo] = useState('');
   const [goldenHook, setGoldenHook] = useState('');
+  const [brandName, setBrandName] = useState(''); // NEW
   const [targetCountry, setTargetCountry] = useState<TargetCountry>('Global');
   const [visualReference, setVisualReference] = useState<string | undefined>(undefined);
   
@@ -25,9 +26,9 @@ export const InputForm: React.FC<InputFormProps> = ({ onConfirmAnchor }) => {
 
   const handleLock = (e: React.FormEvent) => {
       e.preventDefault();
-      if(!productInfo || !goldenHook) return alert("Please fill in all fields.");
+      if(!productInfo || !goldenHook || !brandName) return alert("Please fill in all fields, including Brand Name.");
       setIsLocked(true);
-      onConfirmAnchor(productInfo, goldenHook, visualReference, targetCountry);
+      onConfirmAnchor(productInfo, goldenHook, visualReference, targetCountry, brandName);
   };
 
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -83,7 +84,7 @@ export const InputForm: React.FC<InputFormProps> = ({ onConfirmAnchor }) => {
   };
 
   return (
-    <div className="max-w-2xl mx-auto mt-8">
+    <div className="max-w-2xl mx-auto mt-8 pb-20">
       <div className={`bg-gray-900 border-2 ${isLocked ? 'border-green-500 shadow-[0_0_20px_rgba(34,197,94,0.2)]' : 'border-gray-700'} rounded-xl p-8 transition-all duration-500`}>
         <div className="flex justify-between items-center mb-6">
             <div>
@@ -176,8 +177,20 @@ export const InputForm: React.FC<InputFormProps> = ({ onConfirmAnchor }) => {
             {(mode === 'manual' || isLocked) && (
                 <form onSubmit={handleLock} className="space-y-6 animate-fadeIn">
                     
-                    {/* Country & Visual Reference - NEW */}
+                    {/* Brand & Country */}
                     <div className="grid grid-cols-2 gap-4">
+                         <div>
+                            <label className="block text-xs font-bold text-gray-400 uppercase mb-2 flex items-center gap-1">
+                                <TagIcon className="w-3 h-3" /> Brand Name
+                            </label>
+                            <input 
+                                disabled={isLocked}
+                                value={brandName}
+                                onChange={e => setBrandName(e.target.value)}
+                                className={`w-full bg-gray-950 border ${isLocked ? 'border-green-900 text-gray-400' : 'border-gray-700 text-white'} rounded-lg p-3 focus:ring-2 focus:ring-cyan-500 outline-none text-sm`}
+                                placeholder="e.g. Nike, Kopi Kenangan"
+                            />
+                        </div>
                          <div>
                             <label className="block text-xs font-bold text-gray-400 uppercase mb-2 flex items-center gap-1">
                                 <GlobeIcon className="w-3 h-3" /> Target Country
@@ -195,41 +208,45 @@ export const InputForm: React.FC<InputFormProps> = ({ onConfirmAnchor }) => {
                                 <option value="Brazil">Brazil</option>
                             </select>
                         </div>
-                        
-                        <div>
-                            <label className="block text-xs font-bold text-gray-400 uppercase mb-2 flex items-center gap-1">
-                                <UploadIcon className="w-3 h-3" /> Product Reference (Optional)
-                            </label>
-                            <div className={`relative flex items-center justify-center w-full border rounded-lg h-[46px] ${visualReference ? 'bg-green-900/20 border-green-500/50' : 'bg-gray-950 border-gray-700'}`}>
-                                {visualReference ? (
-                                    <span className="text-xs text-green-400 flex items-center gap-1"><SparklesIcon className="w-3 h-3"/> Image Loaded</span>
-                                ) : (
-                                    <>
-                                        <input 
-                                            type="file"
-                                            ref={productRefRef}
-                                            onChange={handleVisualRefUpload}
-                                            disabled={isLocked}
-                                            className="absolute inset-0 opacity-0 cursor-pointer disabled:cursor-not-allowed"
-                                            accept="image/*"
-                                        />
-                                        <span className="text-xs text-gray-500">Click to Upload Product</span>
-                                    </>
-                                )}
-                            </div>
-                        </div>
                     </div>
 
-                    <div>
-                        <label className="block text-xs font-bold text-cyan-500 uppercase mb-2">Product Context</label>
+                    {/* Product Context & Image */}
+                    <div className="space-y-2">
+                        <div className="flex justify-between items-end">
+                            <label className="block text-xs font-bold text-cyan-500 uppercase">Product Context</label>
+                            {!isLocked && (
+                                <div className="relative">
+                                    <input 
+                                        type="file" 
+                                        ref={productRefRef} 
+                                        onChange={handleVisualRefUpload} 
+                                        className="hidden" 
+                                        accept="image/*"
+                                    />
+                                    <button 
+                                        type="button" 
+                                        onClick={() => productRefRef.current?.click()}
+                                        className={`text-xs flex items-center gap-1 ${visualReference ? 'text-green-400' : 'text-gray-500 hover:text-cyan-400'}`}
+                                    >
+                                        <UploadIcon className="w-3 h-3" />
+                                        {visualReference ? 'Image Uploaded (Ready)' : 'Upload Reference Image (Optional)'}
+                                    </button>
+                                </div>
+                            )}
+                        </div>
                         <textarea 
                             disabled={isLocked}
                             value={productInfo}
                             onChange={e => setProductInfo(e.target.value)}
                             className={`w-full bg-gray-950 border ${isLocked ? 'border-green-900 text-gray-400' : 'border-gray-700 text-white'} rounded-lg p-4 focus:ring-2 focus:ring-cyan-500 outline-none transition-all`}
                             rows={3}
-                            placeholder="e.g. Acne serum with salicylic acid. Target audience is Gen Z..."
+                            placeholder="Describe the product clearly (e.g. 'A pink square bottle')..."
                         />
+                        {visualReference && isLocked && (
+                            <div className="text-[10px] text-green-500 flex items-center gap-1">
+                                <SparklesIcon className="w-3 h-3" /> Using Visual Reference for AI Generation
+                            </div>
+                        )}
                     </div>
 
                     <div>
