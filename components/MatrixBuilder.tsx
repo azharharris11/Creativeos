@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { MatrixSlot, MATRIX_DEFAULTS, MatrixVar_Format, MatrixVar_Setting, MatrixVar_Lighting, MatrixVar_Persona, MatrixVar_POV, MatrixVar_Action, MatrixVar_Tone } from '../types';
-import { ShieldAlertIcon, ZapIcon } from './icons';
+import { ShieldAlertIcon, ZapIcon, DiceIcon } from './icons';
 
 interface MatrixBuilderProps {
     onGenerate: (config: Record<'A' | 'B' | 'C', MatrixSlot>) => void;
@@ -48,12 +48,47 @@ export const MatrixBuilder: React.FC<MatrixBuilderProps> = ({ onGenerate }) => {
         }));
     };
 
+    const handleRandomizeChaos = () => {
+        const newSlots = { ...slots };
+        
+        const getRandom = (arr: string[]) => arr[Math.floor(Math.random() * arr.length)];
+
+        // Helper to randomize a slot (excluding ID)
+        const randomizeSlot = (slotId: 'B' | 'C') => {
+            newSlots[slotId] = {
+                ...newSlots[slotId],
+                format: getRandom(SELECT_OPTIONS.format),
+                setting: getRandom(SELECT_OPTIONS.setting),
+                lighting: getRandom(SELECT_OPTIONS.lighting),
+                persona: getRandom(SELECT_OPTIONS.persona),
+                pov: getRandom(SELECT_OPTIONS.pov),
+                action: getRandom(SELECT_OPTIONS.action),
+                tone: getRandom(SELECT_OPTIONS.tone),
+            };
+        };
+
+        randomizeSlot('B');
+        randomizeSlot('C');
+        
+        setSlots(newSlots);
+    };
+
     return (
         <div className="w-full max-w-7xl mx-auto p-4">
             <header className="mb-8 text-center">
                 <h2 className="text-3xl font-black uppercase tracking-tighter text-slate-200">Phase 2: The Divergence Matrix</h2>
                 <p className="text-slate-400">Configure 3 radically different visual vehicles. <br/> <span className="text-red-400">Warning: High similarity triggers Algorithmic Penalty.</span></p>
             </header>
+
+            <div className="flex justify-end mb-4">
+                 <button 
+                    onClick={handleRandomizeChaos}
+                    className="flex items-center gap-2 bg-gray-800 hover:bg-gray-700 text-purple-300 px-4 py-2 rounded-lg border border-purple-500/30 transition-colors text-sm font-bold uppercase tracking-wider"
+                >
+                    <DiceIcon className="w-5 h-5" />
+                    Inject Random Chaos
+                </button>
+            </div>
 
             {conflictScore > 5 && (
                 <div className="mb-6 bg-red-900/30 border border-red-500 text-red-200 p-4 rounded-lg flex items-center justify-center gap-3 animate-pulse">
@@ -92,10 +127,17 @@ export const MatrixBuilder: React.FC<MatrixBuilderProps> = ({ onGenerate }) => {
             <div className="mt-10 flex justify-center">
                 <button 
                     onClick={() => onGenerate(slots)}
-                    className="bg-green-600 hover:bg-green-500 text-white font-black text-xl py-4 px-16 rounded-lg shadow-[0_0_30px_rgba(22,163,74,0.4)] hover:shadow-[0_0_50px_rgba(22,163,74,0.6)] transition-all transform hover:scale-105 flex items-center gap-3 uppercase tracking-widest"
+                    disabled={conflictScore > 5}
+                    className={`
+                        bg-green-600 text-white font-black text-xl py-4 px-16 rounded-lg shadow-[0_0_30px_rgba(22,163,74,0.4)] 
+                        transition-all transform flex items-center gap-3 uppercase tracking-widest
+                        ${conflictScore > 5 
+                            ? 'opacity-50 cursor-not-allowed grayscale bg-red-900' 
+                            : 'hover:bg-green-500 hover:shadow-[0_0_50px_rgba(22,163,74,0.6)] hover:scale-105'}
+                    `}
                 >
                     <ZapIcon className="w-6 h-6" />
-                    Execute Uglifier Engine
+                    {conflictScore > 5 ? 'Fix Similarity First' : 'Execute Uglifier Engine'}
                 </button>
             </div>
         </div>

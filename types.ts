@@ -1,5 +1,5 @@
 
-export type ViewMode = 'dashboard' | 'mindmap';
+export type ViewMode = 'linear' | 'canvas';
 
 export interface TargetPersona {
   description: string;
@@ -41,7 +41,7 @@ export type MatrixVar_Action = 'Applying_Product' | 'Shock_Reaction' | 'Struggle
 export type MatrixVar_Tone = 'Urgent_Panic' | 'Skeptical' | 'Happy_Relieved' | 'Serious_Scientific';
 
 export interface MatrixSlot {
-  id: 'A' | 'B' | 'C';
+  id: 'A' | 'B' | 'C' | string; // Allow string for dynamic slots in God Mode
   format: MatrixVar_Format | string;
   setting: MatrixVar_Setting | string;
   lighting: MatrixVar_Lighting | string;
@@ -59,7 +59,7 @@ export const MATRIX_DEFAULTS: Record<'A' | 'B' | 'C', MatrixSlot> = {
 
 export interface Hypothesis {
   id: string;
-  slotId: 'A' | 'B' | 'C';
+  slotId: string;
   matrixConfig: MatrixSlot;
   hook: string; // The Golden Hook (Locked)
   visualPrompt: string;
@@ -164,7 +164,7 @@ export interface AdConcept {
 
 export interface MindMapNode {
   id: string;
-  type: 'dna' | 'persona' | 'angle' | 'trigger' | 'format' | 'placement' | 'creative';
+  type: 'dna' | 'persona' | 'angle' | 'trigger' | 'format' | 'placement' | 'creative' | 'hypothesis' | 'anchor';
   label: string;
   content?: any; 
   parentId?: string;
